@@ -4,7 +4,3 @@ numpy
 scikit-learn
 asyncua
 requests
-streamlit
-pandas
-numpy
-plotly
