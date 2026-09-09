@@ -30,7 +30,6 @@ if 'usuarios_db' not in st.session_state:
         "OP101": {"nome": "João Operador", "perfil": "Operador", "senha": "123"}
     }
 else:
-    # Garante que o ADM01 sempre exista mesmo se a sessão já tiver sido iniciada antes
     if "ADM01" not in st.session_state['usuarios_db']:
         st.session_state['usuarios_db']["ADM01"] = {"nome": "Carlos Administrador", "perfil": "Administrador", "senha": "123"}
 
@@ -309,6 +308,11 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
     def render_tabela_setor(setor_nome):
         col_ab, col_and, col_res = st.columns(3, gap="medium")
         
+        # Verifica se o usuário atual tem permissão de Mecânico ou Administrador
+        usuario_logado = st.session_state.get('autenticado', False)
+        perfil_atual = st.session_state.get('usuario_logado', {}).get('perfil', '')
+        pode_agir = usuario_logado and perfil_atual in ["Mecânico", "Administrador"]
+        
         with col_ab:
             os_ab = [o for o in st.session_state['lista_os'] if o['setor'] == setor_nome]
             st.markdown(f"#### 🔴 Abertas ({len(os_ab)})")
@@ -322,16 +326,15 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    if st.button(f"▶️ Iniciar Atendimento {item['id']}", key=f"f_in_{setor_nome}_{item['id']}", use_container_width=True):
-                        if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] in ["Mecânico", "Administrador"]:
+                    # O botão só aparece se estiver logado como Mecânico ou Administrador
+                    if pode_agir:
+                        if st.button(f"▶️ Iniciar Atendimento {item['id']}", key=f"f_in_{setor_nome}_{item['id']}", use_container_width=True):
                             os_and = item.copy()
                             os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
                             os_and["mecanico_responsavel"] = st.session_state['usuario_logado']['nome']
                             st.session_state['em_andamento_os'].insert(0, os_and)
                             st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
                             st.rerun()
-                        else:
-                            st.warning("⚠️ Restrito: Faça login como **Mecânico** ou **Administrador**.")
             else:
                 st.info("Nenhuma ordem aberta neste setor.")
 
@@ -348,10 +351,10 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    rel_fechamento = st.text_area(f"Relatório Técnico Obrigatório ({item['id']}):", placeholder="Descreva detalhadamente o que foi feito na máquina...", key=f"f_rel_{setor_nome}_{item['id']}", height=80)
-                    
-                    if st.button(f"✅ Finalizar e Fechar {item['id']}", key=f"f_fin_{setor_nome}_{item['id']}", use_container_width=True):
-                        if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] in ["Mecânico", "Administrador"]:
+                    if pode_agir:
+                        rel_fechamento = st.text_area(f"Relatório Técnico Obrigatório ({item['id']}):", placeholder="Descreva detalhadamente o que foi feito na máquina...", key=f"f_rel_{setor_nome}_{item['id']}", height=80)
+                        
+                        if st.button(f"✅ Finalizar e Fechar {item['id']}", key=f"f_fin_{setor_nome}_{item['id']}", use_container_width=True):
                             if rel_fechamento.strip() == "":
                                 st.error("⚠️ O preenchimento do relatório técnico é OBRIGATÓRIO para encerrar a OS!")
                             else:
@@ -362,8 +365,6 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
                                 st.session_state['historico_os'].insert(0, os_conc)
                                 st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
                                 st.rerun()
-                        else:
-                            st.warning("⚠️ Apenas Mecânicos e Administradores podem concluir ordens!")
             else:
                 st.info("Nenhuma manutenção em andamento.")
 
@@ -381,8 +382,8 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    if st.button(f"🔄 Reabrir {item['id']}", key=f"f_re_{setor_nome}_{item['id']}", use_container_width=True):
-                        if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] in ["Mecânico", "Administrador"]:
+                    if pode_agir:
+                        if st.button(f"🔄 Reabrir {item['id']}", key=f"f_re_{setor_nome}_{item['id']}", use_container_width=True):
                             os_reab = {
                                 "id": item["id"], "setor": item["setor"], "maquina": item["maquina"],
                                 "defeito": item["defeito"], "prioridade": item["prioridade"],
@@ -392,8 +393,6 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
                             st.session_state['lista_os'].insert(0, os_reab)
                             st.session_state['historico_os'] = [o for o in st.session_state['historico_os'] if o['id'] != item['id']]
                             st.rerun()
-                        else:
-                            st.warning("⚠️ Restrito a Mecânicos/Administradores.")
             else:
                 st.info("Sem histórico recente.")
 
@@ -505,6 +504,10 @@ else:
                     st.markdown(f"- ✅ {p}")
 
     with tab_abertas:
+        usuario_logado = st.session_state.get('autenticado', False)
+        perfil_atual = st.session_state.get('usuario_logado', {}).get('perfil', '')
+        pode_agir = usuario_logado and perfil_atual in ["Mecânico", "Administrador"]
+
         os_ab_maquina = [o for o in st.session_state['lista_os'] if o['maquina'] == maquina_selecionada]
         if os_ab_maquina:
             for item in os_ab_maquina:
@@ -515,20 +518,23 @@ else:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                if st.button(f"▶️ Iniciar Atendimento desta OS ({item['id']})", key=f"p_in_{item['id']}", use_container_width=True):
-                    if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] in ["Mecânico", "Administrador"]:
+                # Só mostra o botão se estiver logado como Mecânico ou Administrador
+                if pode_agir:
+                    if st.button(f"▶️ Iniciar Atendimento desta OS ({item['id']})", key=f"p_in_{item['id']}", use_container_width=True):
                         os_and = item.copy()
                         os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
                         os_and["mecanico_responsavel"] = st.session_state['usuario_logado']['nome']
                         st.session_state['em_andamento_os'].insert(0, os_and)
                         st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
                         st.rerun()
-                    else:
-                        st.warning("⚠️ Restrito: Apenas Mecânicos ou Administradores podem iniciar.")
         else:
             st.success(f"Nenhuma ordem aberta pendente para o ativo **{maquina_selecionada}**.")
 
     with tab_andamento:
+        usuario_logado = st.session_state.get('autenticado', False)
+        perfil_atual = st.session_state.get('usuario_logado', {}).get('perfil', '')
+        pode_agir = usuario_logado and perfil_atual in ["Mecânico", "Administrador"]
+
         os_and_maquina = [o for o in st.session_state['em_andamento_os'] if o['maquina'] == maquina_selecionada]
         if os_and_maquina:
             for item in os_and_maquina:
@@ -539,10 +545,10 @@ else:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                rel_p_maq = st.text_area(f"Relatório Técnico Obrigatório ({item['id']}):", placeholder="Descreva o procedimento realizado...", key=f"p_rel_{item['id']}", height=80)
-                
-                if st.button(f"✅ Concluir OS {item['id']}", key=f"p_fin_{item['id']}", use_container_width=True):
-                    if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] in ["Mecânico", "Administrador"]:
+                if pode_agir:
+                    rel_p_maq = st.text_area(f"Relatório Técnico Obrigatório ({item['id']}):", placeholder="Descreva o procedimento realizado...", key=f"p_rel_{item['id']}", height=80)
+                    
+                    if st.button(f"✅ Concluir OS {item['id']}", key=f"p_fin_{item['id']}", use_container_width=True):
                         if rel_p_maq.strip() == "":
                             st.error("⚠️ O relatório técnico é OBRIGATÓRIO para finalizar a OS!")
                         else:
@@ -553,8 +559,6 @@ else:
                             st.session_state['historico_os'].insert(0, os_conc)
                             st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
                             st.rerun()
-                    else:
-                        st.warning("⚠️ Restrito a Mecânicos ou Administradores.")
         else:
             st.info(f"Nenhuma manutenção ativa no momento para a **{maquina_selecionada}**.")
 
