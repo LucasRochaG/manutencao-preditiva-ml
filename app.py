@@ -20,7 +20,7 @@ MAQUINAS_POR_SETOR = {
 }
 
 # ==============================================================================
-# BANCO DE DADOS LOCAL (SESSION STATE)
+# BANCO DE DADOS LOCAL (SESSION STATE) COM GARANTIA DE PERFIL ADM
 # ==============================================================================
 if 'usuarios_db' not in st.session_state:
     st.session_state['usuarios_db'] = {
@@ -29,6 +29,10 @@ if 'usuarios_db' not in st.session_state:
         "M002": {"nome": "Marcos Técnico", "perfil": "Mecânico", "senha": "123"},
         "OP101": {"nome": "João Operador", "perfil": "Operador", "senha": "123"}
     }
+else:
+    # Garante que o ADM01 sempre exista mesmo se a sessão já tiver sido iniciada antes
+    if "ADM01" not in st.session_state['usuarios_db']:
+        st.session_state['usuarios_db']["ADM01"] = {"nome": "Carlos Administrador", "perfil": "Administrador", "senha": "123"}
 
 if 'autenticado' not in st.session_state:
     st.session_state['autenticado'] = False
@@ -131,7 +135,6 @@ if not st.session_state['autenticado']:
                     st.error("Senha incorreta.")
             else:
                 st.error("Matrícula não cadastrada.")
-                # Dica automática para facilitar os testes
                 matriculas_disponiveis = ", ".join(st.session_state['usuarios_db'].keys())
                 st.info(f"💡 **Dica de Acesso:** Utilize uma das matrículas válidas: `{matriculas_disponiveis}` (Senha padrão: `123`)")
 else:
@@ -220,7 +223,6 @@ if submit_os:
     else:
         st.sidebar.error("A descrição do problema é obrigatória.")
 
-# Dados dinâmicos de preventiva
 def get_preventiva_dados(maquina_nome):
     tag = maquina_nome.split(' ')[0]
     return {
