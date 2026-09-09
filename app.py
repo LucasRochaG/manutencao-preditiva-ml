@@ -51,21 +51,12 @@ if 'historico_os' not in st.session_state:
         {"id": "OS-0998", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Troca de resistência Z2", "prioridade": "Média", "hora_abertura": "06:20", "hora_inicio": "06:25", "hora_conclusao": "07:10", "status": "Concluída", "mecanico_responsavel": "Roberto Mecânico", "relatorio_fechamento": "Substituído o cartucho de resistência queimado e testado o circuito."}
     ]
 
-# Estilo CSS Personalizado (Estilo original leve)
+if 'aba_ativa' not in st.session_state:
+    st.session_state['aba_ativa'] = "🖥️ Painel"
+
+# Estilo CSS Personalizado para transformar a navegação em botões limpos
 st.markdown("""
 <style>
-    .stMetric { background-color: #1f2937; padding: 10px; border-radius: 8px; }
-    .iot-card-mini {
-        background-color: #0f172a;
-        border: 1px solid #1e293b;
-        border-radius: 6px;
-        padding: 6px 12px;
-        margin-bottom: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.75rem;
-    }
     .badge-adm { background-color: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
     .badge-mec { background-color: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
     .badge-op  { background-color: #3b82f6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
@@ -73,7 +64,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# BARRA LATERAL: LOGIN DISCRETO & NAVEGAÇÃO
+# BARRA LATERAL: LOGIN DISCRETO & NAVEGAÇÃO EM BOTÕES
 # ==============================================================================
 st.sidebar.caption("🤖 PROJETO INDUSTRIAL (MOBILE PWA)")
 st.sidebar.markdown("### 🦾 MANTIS 4.0")
@@ -118,26 +109,29 @@ else:
         st.rerun()
 
 st.sidebar.markdown("---")
+st.sidebar.markdown("##### 🧭 Navegação Principal")
 
-# Definição das Abas Dinâmicas de Navegação
-opcoes_nav = ["🖥️ Painel", "🌐 Fábrica"]
+# Botões de Navegação Estilizados na Barra Lateral
+if st.sidebar.button("🖥️ Painel da Máquina", use_container_width=True):
+    st.session_state['aba_ativa'] = "🖥️ Painel"
+    st.rerun()
+
+if st.sidebar.button("🌐 Visão Geral Fábrica", use_container_width=True):
+    st.session_state['aba_ativa'] = "🌐 Fábrica"
+    st.rerun()
+
+# A aba de Cadastros só aparece se for Administrador autenticado
 if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] == "Administrador":
-    opcoes_nav.append("👥 Cadastros (ADM)")
-
-if 'aba_ativa' not in st.session_state:
-    st.session_state['aba_ativa'] = "🖥️ Painel"
-
-# Garante que se o usuário perder o acesso admin, ele volte para o Painel
-if st.session_state['aba_ativa'] == "👥 Cadastros (ADM)" and (not st.session_state['autenticado'] or st.session_state['usuario_logado']['perfil'] != "Administrador"):
-    st.session_state['aba_ativa'] = "🖥️ Painel"
-
-col_n1, col_n2 = st.sidebar.columns(len(opcoes_nav) if len(opcoes_nav) <= 2 else 2)
-# Usando rádio limpo para navegação lateral
-st.session_state['aba_ativa'] = st.sidebar.radio("Navegação:", opcoes_nav, index=opcoes_nav.index(st.session_state['aba_ativa']))
+    if st.sidebar.button("👥 Cadastros (ADM)", use_container_width=True):
+        st.session_state['aba_ativa'] = "👥 Cadastros (ADM)"
+        st.rerun()
+else:
+    if st.session_state['aba_ativa'] == "👥 Cadastros (ADM)":
+        st.session_state['aba_ativa'] = "🖥️ Painel"
 
 st.sidebar.markdown("---")
 
-# SELEÇÃO DE MÁQUINA (NO PAINEL)
+# SELEÇÃO DE MÁQUINA (EXCLUSIVO NO PAINEL)
 if st.session_state['aba_ativa'] == "🖥️ Painel":
     setor_selecionado = st.sidebar.selectbox("Setor:", ["Injetora Plástica", "Linha de Montagem", "Embalagem & Selagem"])
     maquinas_disponiveis = MAQUINAS_POR_SETOR[setor_selecionado]
@@ -147,8 +141,8 @@ else:
     setor_selecionado = "Injetora Plástica"
     maquina_selecionada = MAQUINAS_POR_SETOR["Injetora Plástica"][0]
 
-# ABERTURA RÁPIDA DE OS (Disponível para qualquer um abrir)
-st.sidebar.markdown("##### 📝 Nova OS")
+# ABERTURA RÁPIDA DE OS
+st.sidebar.markdown("##### 📝 Abrir Nova OS")
 os_setor = st.sidebar.selectbox("Setor Destino:", ["Injetora Plástica", "Linha de Montagem", "Embalagem & Selagem"], key="os_setor_select")
 maquinas_form_dinamicas = MAQUINAS_POR_SETOR[os_setor]
 
@@ -156,7 +150,7 @@ with st.sidebar.form(key="form_os_simplificada", clear_on_submit=True):
     os_maquina = st.selectbox("Máquina:", maquinas_form_dinamicas)
     os_defeito = st.text_area("Problema:", placeholder="Descreva o problema...", height=60)
     os_prioridade = st.selectbox("Prioridade:", ["Alta", "Média", "Baixa"])
-    submit_os = st.form_submit_button("🚀 Abrir OS")
+    submit_os = st.form_submit_button("🚀 Enviar Chamado")
 
 if submit_os:
     if os_defeito.strip() != "":
@@ -195,7 +189,7 @@ info_prev = get_preventiva_dados(maquina_selecionada)
 # ==============================================================================
 if st.session_state['aba_ativa'] == "👥 Cadastros (ADM)":
     st.markdown("### 👥 Gestão de Cadastros e Usuários (Painel do Administrador)")
-    st.caption("Aqui o Administrador cria, edita ou remove os acessos dos funcionários da fábrica.")
+    st.caption("Aqui o Administrador gerencia os acessos dos funcionários da fábrica.")
     
     col_cad1, col_cad2 = st.columns(2)
     
@@ -244,20 +238,6 @@ if st.session_state['aba_ativa'] == "👥 Cadastros (ADM)":
 elif st.session_state['aba_ativa'] == "🌐 Fábrica":
     st.markdown("### 🌐 Visão Geral Fábrica — MANTIS 4.0")
     
-    df_os_todas = pd.DataFrame(st.session_state['lista_os'] + st.session_state['em_andamento_os'] + st.session_state['historico_os'])
-    if not df_os_todas.empty:
-        col_g1, col_g2 = st.columns([2, 1])
-        with col_g1:
-            df_counts = df_os_todas.groupby("setor").size().reset_index(name="Total de OSs")
-            st.markdown("##### 📊 Volume de Demandas por Setor")
-            st.bar_chart(df_counts.set_index("setor"))
-        with col_g2:
-            st.metric("Total de OSs", len(df_os_todas))
-            st.metric("Em Atendimento", len(st.session_state['em_andamento_os']))
-            st.metric("Taxa de Resolução", f"{int((len(st.session_state['historico_os'])/len(df_os_todas))*100)}%")
-
-    st.markdown("---")
-
     tab_inj, tab_mont, tab_emb = st.tabs(["🏢 Injetora Plástica", "🏢 Linha de Montagem", "🏢 Embalagem & Selagem"])
 
     def render_tabela_setor(setor_nome):
@@ -281,7 +261,7 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
                             st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
                             st.rerun()
                         else:
-                            st.warning("⚠️ Faça login como **Mecânico** ou **Administrador** para iniciar!")
+                            st.warning("⚠️ Faça login como **Mecânico** ou **Administrador**.")
                     st.divider()
             else:
                 st.caption("Nenhuma ordem aberta.")
@@ -295,7 +275,6 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
                     st.markdown(f"**{item['id']}** | {item['maquina']}")
                     st.caption(f"🛠️ {item['defeito']} | Resp: {item.get('mecanico_responsavel','Técnico')}")
                     
-                    # Campo de Relatório Técnico Exigido
                     rel_fechamento = st.text_area(f"Relatório Técnico ({item['id']}):", placeholder="Descreva o serviço executado...", key=f"f_rel_{setor_nome}_{item['id']}", height=70)
                     
                     if st.button(f"✅ Finalizar {item['id']}", key=f"f_fin_{setor_nome}_{item['id']}", use_container_width=True):
@@ -311,12 +290,12 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
                                 st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
                                 st.rerun()
                         else:
-                            st.warning("⚠️ Apenas **Mecânicos ou Administradores** podem fechar OSs!")
+                            st.warning("⚠️ Apenas Mecânicos ou Administradores podem fechar OSs!")
                     st.divider()
             else:
                 st.caption("Nenhum atendimento.")
 
-        # OS RESOLVIDAS (EXIBINDO QUEM FECHOU E O RELATÓRIO)
+        # OS RESOLVIDAS
         with col_res:
             os_res = [o for o in st.session_state['historico_os'] if o['setor'] == setor_nome]
             st.markdown(f"##### ✅ Concluídas ({len(os_res)})")
@@ -337,7 +316,7 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
                             st.session_state['historico_os'] = [o for o in st.session_state['historico_os'] if o['id'] != item['id']]
                             st.rerun()
                         else:
-                            st.warning("⚠️ Apenas **Mecânicos/Administradores** podem reabrir.")
+                            st.warning("⚠️ Restrito a Mecânicos/Administradores.")
                     st.divider()
             else:
                 st.caption("Sem histórico recente.")
@@ -355,41 +334,22 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
 else:
     st.markdown(f"### 🏢 Setor: **{setor_selecionado}** | ⚙️ **{maquina_selecionada}**")
 
-    tag_maquina_atual = maquina_selecionada.split(' ')[0]
-    st.markdown(f"""
-    <div class="iot-card-mini">
-        <div style="color: #64748b; font-family: monospace;">
-            📡 <b>MANTIS IoT:</b> Conexão com o <b>CLP</b> pendente (Alvo: <b>{tag_maquina_atual}</b>)
-        </div>
-        <div style="background-color: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">
-            ⏳ Modo Simulação
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
     tab_principal, tab_preventiva, tab_abertas, tab_andamento, tab_historico = st.tabs([
         "📊 Telemetria", "🛠️ Plano Preventivo", "📌 OSs Abertas", "⚙️ Em Atendimento", "✅ Histórico"
     ])
 
     with tab_principal:
-        if setor_selecionado == "Injetora Plástica":
-            col_c1, col_c2, col_c3 = st.columns(3)
-            temp_canhao = col_c1.slider("Temperatura do Canhão (°C)", 180.0, 260.0, 220.0)
-            temp_molde = col_c2.slider("Temperatura do Molde (°C)", 15.0, 70.0, 32.0)
-            pressao_recalque = col_c3.slider("Pressão de Recalque (bar)", 50.0, 160.0, 95.0)
-            risco = min(100.0, (pressao_recalque * temp_molde) / 80)
-        else:
-            col_c1, col_c2 = st.columns(2)
-            param1 = col_c1.slider("Pressão da Linha (bar)", 4.0, 10.0, 6.5)
-            param2 = col_c2.slider("Velocidade do Ciclo (peças/min)", 100, 300, 240)
-            risco = 15.0 if param1 >= 5.5 else 75.0
-
+        col_c1, col_c2, col_c3 = st.columns(3)
+        temp_canhao = col_c1.slider("Temperatura do Canhão (°C)", 180.0, 260.0, 220.0)
+        temp_molde = col_c2.slider("Temperatura do Molde (°C)", 15.0, 70.0, 32.0)
+        pressao_recalque = col_c3.slider("Pressão de Recalque (bar)", 50.0, 160.0, 95.0)
+        
+        risco = min(100.0, (pressao_recalque * temp_molde) / 80)
         disp = max(60, int(98 - (risco * 0.3)))
         perf = max(70, int(95 - (risco * 0.2)))
         qual = max(80, int(99 - (risco * 0.4)))
         oee = int((disp/100) * (perf/100) * (qual/100) * 100)
 
-        st.markdown("##### 📉 Indicadores de Desempenho Operacional")
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Disponibilidade", f"{disp}%")
         m2.metric("Performance", f"{perf}%")
@@ -403,14 +363,6 @@ else:
             st.warning("🟡 Modo de Atenção — Desvio Detectado")
         else:
             st.error("🔴 Risco Crítico — Alta Probabilidade de Parada")
-
-        st.markdown("---")
-        st.markdown("##### 📈 Telemetria em Tempo Real")
-        df_chart = pd.DataFrame({
-            "Pressão do Sistema (bar)": np.random.normal(loc=100, scale=2, size=20),
-            "Temperatura Interna (°C)": np.random.normal(loc=220, scale=5, size=20)
-        })
-        st.line_chart(df_chart)
 
     with tab_preventiva:
         st.caption(f"Tempo estimado de parada programada: {info_prev['tempo']}")
@@ -462,7 +414,7 @@ else:
                             st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
                             st.rerun()
                     else:
-                        st.warning("⚠️ Restrito: Apenas **Mecânicos ou Administradores** podem concluir.")
+                        st.warning("⚠️ Restrito a Mecânicos ou Administradores.")
                 st.divider()
         else:
             st.info(f"Nenhuma manutenção em andamento na **{maquina_selecionada}**.")
