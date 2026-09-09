@@ -12,13 +12,20 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inicialização segura do session_state
+# Mapeamento de 10 Máquinas por Setor
+MAQUINAS_POR_SETOR = {
+    "Injetora": [f"INJ-{i:02d} (Injetora Plástica {i})" for i in range(1, 11)],
+    "Montagem": [f"MONT-{i:02d} (Linha Montagem {i})" for i in range(1, 11)],
+    "Embalagem": [f"EMB-{i:02d} (Seladora & Blister {i})" for i in range(1, 11)]
+}
+
+# Inicialização do session_state com dados iniciais
 if 'lista_os' not in st.session_state:
     st.session_state['lista_os'] = [
         {
             "id": "OS-1001",
             "setor": "Injetora",
-            "maquina": "INJ-01",
+            "maquina": "INJ-01 (Injetora Plástica 1)",
             "defeito": "Vazamento de óleo no cilindro de injeção",
             "prioridade": "Alta",
             "hora_abertura": "08:15:22"
@@ -26,10 +33,18 @@ if 'lista_os' not in st.session_state:
         {
             "id": "OS-1002",
             "setor": "Injetora",
-            "maquina": "INJ-02",
+            "maquina": "INJ-05 (Injetora Plástica 5)",
             "defeito": "Ruído anormal no exaustor",
             "prioridade": "Média",
             "hora_abertura": "09:30:10"
+        },
+        {
+            "id": "OS-1004",
+            "setor": "Embalagem",
+            "maquina": "EMB-03 (Seladora & Blister 3)",
+            "defeito": "Falha na resistência de selagem",
+            "prioridade": "Alta",
+            "hora_abertura": "10:11:05"
         }
     ]
 
@@ -38,7 +53,7 @@ if 'em_andamento_os' not in st.session_state:
         {
             "id": "OS-1003",
             "setor": "Montagem",
-            "maquina": "MONT-01",
+            "maquina": "MONT-02 (Linha Montagem 2)",
             "defeito": "Ajuste na garra pneumática do êmbolo",
             "prioridade": "Baixa",
             "hora_abertura": "10:05:44",
@@ -51,7 +66,7 @@ if 'historico_os' not in st.session_state:
         {
             "id": "OS-0998",
             "setor": "Injetora",
-            "maquina": "INJ-01",
+            "maquina": "INJ-01 (Injetora Plástica 1)",
             "defeito": "Troca de resistência cerâmica Z2",
             "prioridade": "Média",
             "hora_abertura": "06:20:00",
@@ -94,90 +109,30 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# BARRA LATERAL: NAVEGAÇÃO E ABERTURA DE OS
+# BARRA LATERAL: SELEÇÃO E FORMULÁRIO DE OS
 # ==============================================================================
 st.sidebar.image("https://img.icons8.com/color/96/syringe.png", width=70)
 st.sidebar.title("Injex Cirúrgica LTDA")
 st.sidebar.caption("PCM & Inteligência Preditiva")
 
-# NOMES SIMPLIFICADOS
-setor_selecionado = st.sidebar.selectbox(
-    "🏢 Selecione o Setor Fabril:",
-    ["Injetora", "Montagem", "Embalagem"]
-)
-
-if setor_selecionado == "Injetora":
-    maquinas = ["INJ-01 (KraussMaffei 200T)", "INJ-02 (Romi Prática 130T)"]
-elif setor_selecionado == "Montagem":
-    maquinas = ["MONT-01 (Linha Alta Velocidade)", "MONT-02 (Montadora Êmbolo/Corpo)"]
-else:
-    maquinas = ["EMB-01 (Termoformadora Blister)", "EMB-02 (Seladora & Encartonadora)"]
-
-maquina_selecionada = st.sidebar.selectbox("⚙️ Selecione a Máquina:", maquinas)
+# NAVEGAÇÃO DE SETOR E MÁQUINA
+setor_selecionado = st.sidebar.selectbox("🏢 Selecione o Setor Fabril:", ["Injetora", "Montagem", "Embalagem"])
+maquinas_disponiveis = MAQUINAS_POR_SETOR[setor_selecionado]
+maquina_selecionada = st.sidebar.selectbox("⚙️ Selecione a Máquina:", maquinas_disponiveis)
 
 st.sidebar.markdown("---")
 
-# DADOS CATEGORIZADOS DE PREVENTIVA POR MAQUINA E POR TIPO
-dados_preventiva = {
-    "INJ-01 (KraussMaffei 200T)": {
-        "tempo": "2h 30min",
-        "pecas_por_tipo": {
-            "🔩 Mecânica & Estrutural": ["Anel de Bloqueio", "Jogo de Buchas Extratoras", "Coluna de Guia"],
-            "💧 Hidráulica": ["Filtro de Óleo Hidráulico", "Reparo do Cilindro de Injeção"],
-            "⚡ Elétrica & Térmica": ["Resistência Ceramica Z1", "Termopar Tipo K"]
-        }
-    },
-    "INJ-02 (Romi Prática 130T)": {
-        "tempo": "1h 45min",
-        "pecas_por_tipo": {
-            "🔩 Mecânica & Estrutural": ["Bico de Injeção", "Pino Extrator"],
-            "💧 Hidráulica": ["Filtro de Retorno", "Válvula Proporcional"],
-            "⚡ Elétrica & Térmica": ["Resistência Cerâmica Z1", "Contator Principal"]
-        }
-    },
-    "MONT-01 (Linha Alta Velocidade)": {
-        "tempo": "1h 15min",
-        "pecas_por_tipo": {
-            "💨 Pneumática": ["Atuadores Pneumáticos Festo", "Válvula Solenóide 5/2 vias"],
-            "🔩 Mecânica & Robótica": ["Garras do Êmbolo", "Correia Sincronizadora"],
-            "👁️ Sensores & Automação": ["Sensor Indutivo M12", "Fotorreceptor Óptico"]
-        }
-    },
-    "MONT-02 (Montadora Êmbolo/Corpo)": {
-        "tempo": "2h 00min",
-        "pecas_por_tipo": {
-            "💨 Pneumática": ["Ventosas de Silicone", "Gerador de Vácuo"],
-            "🔩 Mecânica & Robótica": ["Atuador Rotativo Servo", "Mancal Linear"],
-            "⚡ Elétrica": ["Cabo Servo Encoder", "Relé de Segurança"]
-        }
-    },
-    "EMB-01 (Termoformadora Blister)": {
-        "tempo": "3h 00min",
-        "pecas_por_tipo": {
-            "🔥 Térmica & Selagem": ["Matriz de Selagem Térmica", "Borracha Hálux de Silicone"],
-            "💨 Pneumática & Vácuo": ["Filtro de Vácuo", "Cilindro Molde"],
-            "🔩 Mecânica": ["Corda de Aquecimento", "Faca de Corte Blister"]
-        }
-    },
-    "EMB-02 (Seladora & Encartonadora)": {
-        "tempo": "1h 30min",
-        "pecas_por_tipo": {
-            "🔥 Térmica & Selagem": ["Cartucho Aquecedor 500W", "Fita de Teflon Protetora"],
-            "🔩 Mecânica & Tracionamento": ["Correia Dentada de Tração", "Rolamentos de Encartonagem"],
-            "⚡ Elétrica": ["Controlador PID de Temperatura"]
-        }
-    }
-}
-
-info_prev = dados_preventiva[maquina_selecionada]
-
-# FORMULÁRIO DE ABERTURA RÁPIDA DE OS
+# FORMULÁRIO DE ABERTURA DE OS COM MÁQUINA SELECIONÁVEL
 st.sidebar.subheader("📝 Abertura Rápida de OS")
 
 with st.sidebar.form(key="form_os_simplificada", clear_on_submit=True):
     os_setor = st.selectbox("Setor Destino:", ["Injetora", "Montagem", "Embalagem"])
-    os_maquina = st.text_input("Máquina:", value=maquina_selecionada.split(' ')[0])
-    os_defeito = st.text_area("Sintoma / Defeito:", placeholder="Descreva brevemente...")
+    
+    # Máquina dinamicamente atualizada com base no setor selecionado no formulário
+    maquinas_form = MAQUINAS_POR_SETOR[os_setor]
+    os_maquina = st.selectbox("Máquina:", maquinas_form)
+    
+    os_defeito = st.text_area("Sintoma / Defeito:", placeholder="Descreva brevemente o problema...")
     os_prioridade = st.selectbox("Prioridade:", ["Alta", "Média", "Baixa"])
     
     submit_os = st.form_submit_button("🚀 Registrar OS")
@@ -193,17 +148,32 @@ if submit_os:
             "hora_abertura": datetime.now().strftime('%H:%M:%S')
         }
         st.session_state['lista_os'].insert(0, nova_os)
-        st.sidebar.success(f"✅ {nova_os['id']} registrada com sucesso!")
+        st.sidebar.success(f"✅ {nova_os['id']} registrada para {os_maquina.split(' ')[0]}!")
         st.rerun()
     else:
         st.sidebar.error("Descreva o defeito antes de enviar.")
 
+# Gerador Dinâmico de Componentes de Preventiva por Categoria
+def get_preventiva_dados(maquina_nome):
+    tag = maquina_nome.split(' ')[0]
+    return {
+        "tempo": "2h 00min",
+        "pecas_por_tipo": {
+            "🔩 Mecânica & Estrutural": [f"Conjunto de Bujões {tag}", f"Anel de Guia Protetor", "Eixo Principal"],
+            "💨 Pneumática & Hidráulica": [f"Filtro de Pressão {tag}", "Reparo Solenóide", "Válvula Reguladora"],
+            "⚡ Elétrica & Automação": ["Sensor de Posição M12", "Cabo Protetor de Sinal", "Cartucho Aquecedor"]
+        }
+    }
+
+info_prev = get_preventiva_dados(maquina_selecionada)
+
 # ==============================================================================
-# ESTRUTURA DE ABAS NA TELA PRINCIPAL
+# ESTRUTURA DE ABAS PRINCIPAIS
 # ==============================================================================
 st.title(f"🏭 Injex Cirúrgica | {maquina_selecionada}")
 
-tab_principal, tab_preventiva, tab_abertas, tab_andamento, tab_historico = st.tabs([
+tab_global, tab_principal, tab_preventiva, tab_abertas, tab_andamento, tab_historico = st.tabs([
+    "🌐 Visão Geral Fábrica (Tabela OSs)",
     "📊 Visão Geral & Telemetria",
     "🛠️ Plano de Preventiva",
     "📌 OSs Abertas", 
@@ -212,10 +182,89 @@ tab_principal, tab_preventiva, tab_abertas, tab_andamento, tab_historico = st.ta
 ])
 
 # ------------------------------------------------------------------------------
-# ABA 1: VISÃO GERAL DA MÁQUINA
+# ABA 0: VISÃO GERAL FÁBRICA (TABELA GLOBAL DE OSs DE TODAS AS MÁQUINAS)
+# ------------------------------------------------------------------------------
+with tab_global:
+    st.subheader("🌐 Painel Global do PCM — Visão Geral de Todas as Máquinas da Fábrica")
+    st.caption("Acompanhamento unificado de todas as Ordens de Serviço abertas, em andamento e encerradas.")
+    
+    col_tab_aberta, col_tab_andamento, col_tab_resolvido = st.columns(3)
+    
+    # COLUNA 1: PARADAS / ABERTAS
+    with col_tab_aberta:
+        st.markdown("### 🔴 Parada / Abertas")
+        st.caption(f"Total: {len(st.session_state['lista_os'])}")
+        
+        if st.session_state['lista_os']:
+            for os_item in st.session_state['lista_os']:
+                st.markdown(f"**{os_item['id']}** | `{os_item['setor']}` - **{os_item['maquina'].split(' ')[0]}**")
+                st.write(f"⚠️ *{os_item['defeito']}*")
+                st.caption(f"Prioridade: {os_item['prioridade']} | Abertura: {os_item.get('hora_abertura', 'N/A')}")
+                
+                if st.button(f"▶️ Iniciar {os_item['id']}", key=f"global_iniciar_{os_item['id']}", use_container_width=True):
+                    os_and = os_item.copy()
+                    os_and["hora_inicio"] = datetime.now().strftime('%H:%M:%S')
+                    st.session_state['em_andamento_os'].insert(0, os_and)
+                    st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != os_item['id']]
+                    st.rerun()
+                st.divider()
+        else:
+            st.success("Nenhuma OS aberta na fábrica no momento.")
+
+    # COLUNA 2: EM ANDAMENTO
+    with col_tab_andamento:
+        st.markdown("### ⚙️ Em Andamento")
+        st.caption(f"Total: {len(st.session_state['em_andamento_os'])}")
+        
+        if st.session_state['em_andamento_os']:
+            for os_item in st.session_state['em_andamento_os']:
+                st.markdown(f"**{os_item['id']}** | `{os_item['setor']}` - **{os_item['maquina'].split(' ')[0]}**")
+                st.write(f"🛠️ *{os_item['defeito']}*")
+                st.caption(f"Início: {os_item.get('hora_inicio', 'N/A')}")
+                
+                if st.button(f"✅ Finalizar {os_item['id']}", key=f"global_concluir_{os_item['id']}", use_container_width=True):
+                    os_conc = os_item.copy()
+                    os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M:%S')
+                    os_conc["status"] = "Concluída"
+                    st.session_state['historico_os'].insert(0, os_conc)
+                    st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != os_item['id']]
+                    st.rerun()
+                st.divider()
+        else:
+            st.info("Nenhuma manutenção em execução na fábrica.")
+
+    # COLUNA 3: RESOLVIDAS
+    with col_tab_resolvido:
+        st.markdown("### ✅ Resolvidas")
+        st.caption(f"Total: {len(st.session_state['historico_os'])}")
+        
+        if st.session_state['historico_os']:
+            for os_item in st.session_state['historico_os']:
+                st.markdown(f"**{os_item['id']}** | `{os_item['setor']}` - **{os_item['maquina'].split(' ')[0]}**")
+                st.write(f"✔️ *{os_item['defeito']}*")
+                st.caption(f"Concluída às: {os_item.get('hora_conclusao', 'N/A')}")
+                
+                if st.button(f"🔄 Reabrir {os_item['id']}", key=f"global_reabrir_{os_item['id']}", use_container_width=True):
+                    os_reab = {
+                        "id": os_item["id"],
+                        "setor": os_item["setor"],
+                        "maquina": os_item["maquina"],
+                        "defeito": os_item["defeito"],
+                        "prioridade": os_item["prioridade"],
+                        "hora_abertura": datetime.now().strftime('%H:%M:%S')
+                    }
+                    st.session_state['lista_os'].insert(0, os_reab)
+                    st.session_state['historico_os'] = [o for o in st.session_state['historico_os'] if o['id'] != os_item['id']]
+                    st.rerun()
+                st.divider()
+        else:
+            st.info("Nenhuma OS finalizada no histórico.")
+
+# ------------------------------------------------------------------------------
+# ABA 1: VISÃO GERAL DA MÁQUINA SELECIONADA
 # ------------------------------------------------------------------------------
 with tab_principal:
-    st.subheader("🎛️ Painel de Telemetria CLP em Tempo Real")
+    st.subheader(f"🎛️ Telemetria & Monitoramento CLP - {maquina_selecionada}")
     
     if setor_selecionado == "Injetora":
         col_c1, col_c2, col_c3 = st.columns(3)
@@ -265,15 +314,14 @@ with tab_principal:
         st.line_chart(chart_data)
 
 # ------------------------------------------------------------------------------
-# ABA 2: NOVA ABA DE PLANO DE PREVENTIVA (ORGANIZADA POR TIPO DE PEÇA)
+# ABA 2: PLANO DE PREVENTIVA DA MÁQUINA SELECIONADA
 # ------------------------------------------------------------------------------
 with tab_preventiva:
-    st.subheader(f"🛠️ Plano de Preventiva - Equipamento: {maquina_selecionada}")
-    st.info(f"⏱️ **Tempo Estimado para Manutenção Preventiva:** {info_prev['tempo']}")
+    st.subheader(f"🛠️ Plano de Preventiva — {maquina_selecionada}")
+    st.info(f"⏱️ **Tempo Estimado de Parada Programada:** {info_prev['tempo']}")
     
-    st.markdown("### 📦 Componentes & Peças de Reposição por Categoria")
+    st.markdown("### 📦 Componentes & Peças Separadas por Categoria")
     
-    # Exibição organizada por colunas / tipos de peças
     categorias = info_prev['pecas_por_tipo']
     cols_cat = st.columns(len(categorias))
     
@@ -284,10 +332,10 @@ with tab_preventiva:
                 st.write(f"✅ {peca}")
                 
     st.markdown("---")
-    st.caption("💡 *Nota do PCM:* Verifique a disponibilidade de estoque das peças listadas acima antes de agendar a parada programada.")
+    st.caption("💡 *Nota do PCM:* Verifique a disponibilidade em almoxarifado antes da parada.")
 
 # ------------------------------------------------------------------------------
-# ABA 3: OSs ABERTAS
+# ABA 3: OSs ABERTAS DO SETOR
 # ------------------------------------------------------------------------------
 with tab_abertas:
     st.subheader(f"📌 Chamados Aguardando Atendimento no Setor: {setor_selecionado}")
@@ -316,7 +364,7 @@ with tab_abertas:
                 st.markdown(f"""
                 <div class="{css_class}">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <b>{item['id']} | {item['maquina']}</b>
+                        <b>{item['id']} | {item['maquina'].split(' ')[0]}</b>
                         <small style="float: right;">⏱️ {hora_exibicao}</small>
                     </div>
                     <div style="margin-top: 4px; font-size: 0.9em;">
@@ -338,7 +386,7 @@ with tab_abertas:
         st.info("✨ Nenhuma Ordem de Serviço aberta aguardando atendimento para este setor.")
 
 # ------------------------------------------------------------------------------
-# ABA 4: OSs EM ANDAMENTO
+# ABA 4: OSs EM ANDAMENTO DO SETOR
 # ------------------------------------------------------------------------------
 with tab_andamento:
     st.subheader(f"⚙️ Manutenções em Execução no Setor: {setor_selecionado}")
@@ -370,7 +418,7 @@ with tab_andamento:
         st.info("✨ Nenhuma manutenção em execução no momento para este setor.")
 
 # ------------------------------------------------------------------------------
-# ABA 5: HISTÓRICO DE OSs CONCLUÍDAS
+# ABA 5: HISTÓRICO DE OSs CONCLUÍDAS DO SETOR
 # ------------------------------------------------------------------------------
 with tab_historico:
     st.subheader(f"✅ Histórico de OSs Resolvidas no Setor: {setor_selecionado}")
