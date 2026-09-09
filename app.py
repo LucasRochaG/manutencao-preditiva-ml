@@ -41,12 +41,16 @@ if 'historico_os' not in st.session_state:
 st.markdown("""
 <style>
     .stMetric { background-color: #1f2937; padding: 10px; border-radius: 8px; }
-    .iot-card {
+    .iot-card-mini {
         background-color: #0f172a;
-        border: 1px dashed #38bdf8;
-        border-radius: 8px;
-        padding: 12px;
-        margin-top: 20px;
+        border: 1px solid #1e293b;
+        border-radius: 6px;
+        padding: 4px 10px;
+        margin-top: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.75rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -281,9 +285,7 @@ else:
                 for p in pecas:
                     st.write(f"• {p}")
 
-    # ==========================================================================
-    # ABAS DE OS DO PAINEL: FILTRADAS EXCLUSIVAMENTE PELA MÁQUINA SELECIONADA
-    # ==========================================================================
+    # ABAS DE OS FILTRADAS APENAS PELA MÁQUINA SELECIONADA
     with tab_abertas:
         os_ab_maquina = [o for o in st.session_state['lista_os'] if o['maquina'] == maquina_selecionada]
         if os_ab_maquina:
@@ -324,25 +326,17 @@ else:
         else:
             st.caption(f"Nenhum histórico de manutenção recente para a **{maquina_selecionada}**.")
 
-# ==============================================================================
-# RODAPÉ: MÓDULO DE CONEXÃO IOT / CLP
-# ==============================================================================
-st.markdown("---")
-tag_maquina_atual = maquina_selecionada if st.session_state['pagina_ativa'] == "Painel" else "PLANT-GLOBAL"
-
-st.markdown(f"""
-<div class="iot-card">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <b style="color: #38bdf8;">📡 MANTIS IoT Connect — Modbus TCP / OPC-UA Protocol</b><br>
-            <small style="color: #94a3b8;">Endereço de Rede IP: 192.168.10.{np.random.randint(10,99)} | Alvo da Leitura: <b>{tag_maquina_atual}</b></small>
+    # ==========================================================================
+    # RODAPÉ COMPACTO: APARECE APENAS NO PAINEL DA MÁQUINA SELECIONADA
+    # ==========================================================================
+    tag_maquina_atual = maquina_selecionada.split(' ')[0]
+    st.markdown(f"""
+    <div class="iot-card-mini">
+        <div style="color: #64748b; font-family: monospace;">
+            📡 <b>MANTIS IoT:</b> Conexão Modbus TCP pendente (Alvo: <b>{tag_maquina_atual}</b>)
         </div>
-        <div>
-            <span style="background-color: #0284c7; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem;">⏳ Aguardando Conexão com CLP...</span>
+        <div style="background-color: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">
+            ⏳ Sem Conexão Direta (Modo Simulação)
         </div>
     </div>
-    <div style="margin-top: 8px; font-family: monospace; font-size: 0.8rem; color: #64748b;">
-        [MANTIS SYSTEM LOG]: Solicitando fluxo contínuo de pacotes da máquina ({tag_maquina_atual}). Sinal aguardando sincronização... (0 kb/s)
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
