@@ -15,7 +15,6 @@ st.set_page_config(
 # Inicialização da Lista Global de Ordens de Serviço (Persistência em Sessão)
 if 'lista_os' not in st.session_state:
     st.session_state['lista_os'] = [
-        # Exemplos iniciais para teste
         {
             "id": "OS-1001",
             "setor": "1. Injeção Plástica",
@@ -42,7 +41,7 @@ if 'lista_os' not in st.session_state:
         }
     ]
 
-# Estilo CSS Personalizado para os Cards Compactos de OS
+# Estilo CSS Personalizado
 st.markdown("""
 <style>
     .stMetric { background-color: #1f2937; padding: 10px; border-radius: 8px; }
@@ -52,24 +51,24 @@ st.markdown("""
         background-color: #450a0a;
         border-left: 6px solid #dc2626;
         padding: 8px 12px;
-        margin-bottom: 8px;
-        border-radius: 6px;
+        margin-bottom: 4px;
+        border-radius: 6px 6px 0px 0px;
         color: #fef2f2;
     }
     .os-card-media {
         background-color: #451a03;
         border-left: 6px solid #d97706;
         padding: 8px 12px;
-        margin-bottom: 8px;
-        border-radius: 6px;
+        margin-bottom: 4px;
+        border-radius: 6px 6px 0px 0px;
         color: #fffbeb;
     }
     .os-card-baixa {
         background-color: #052e16;
         border-left: 6px solid #16a34a;
         padding: 8px 12px;
-        margin-bottom: 8px;
-        border-radius: 6px;
+        margin-bottom: 4px;
+        border-radius: 6px 6px 0px 0px;
         color: #f0fdf4;
     }
     
@@ -90,7 +89,6 @@ st.sidebar.image("https://img.icons8.com/color/96/syringe.png", width=70)
 st.sidebar.title("Injex Cirúrgica LTDA")
 st.sidebar.caption("PCM & Inteligência Preditiva")
 
-# 1. Seleção de Setor e Máquina
 setor_selecionado = st.sidebar.selectbox(
     "🏢 Selecione o Setor Fabril:",
     ["1. Injeção Plástica", "2. Montagem Automática", "3. Embalagem & Blister"]
@@ -177,7 +175,6 @@ if submit_os:
             "prioridade": os_prioridade,
             "hora": datetime.now().strftime('%H:%M:%S')
         }
-        # Adiciona no topo da lista (ordem de abertura)
         st.session_state['lista_os'].insert(0, nova_os)
         st.sidebar.success(f"✅ {nova_os['id']} registrada com sucesso!")
         st.rerun()
@@ -190,21 +187,18 @@ if submit_os:
 st.title(f"🏭 Injex Cirúrgica | {maquina_selecionada}")
 
 # ------------------------------------------------------------------------------
-# QUADRO DE ORDENS DE SERVIÇO ABERTAS DO SETOR
+# QUADRO DE ORDENS DE SERVIÇO ABERTAS DO SETOR (COM BOTÃO DE BAIXA)
 # ------------------------------------------------------------------------------
 st.subheader(f"📋 Ordens de Serviço Abertas no Setor: {setor_selecionado}")
 
-# Filtragem das OSs que pertencem apenas ao setor atualmente visualizado
 os_do_setor = [os for os in st.session_state['lista_os'] if os['setor'] == setor_selecionado]
 
 if os_do_setor:
-    # Exibe as OS em colunas para criar um layout de quadro compacto
     cols_os = st.columns(min(len(os_do_setor), 4))
     
     for idx, item in enumerate(os_do_setor):
         col_target = cols_os[idx % 4]
         
-        # Seleção da cor por prioridade
         if item['prioridade'] == "Alta":
             css_class = "os-card-alta"
             icone = "🔴 ALTA"
@@ -218,7 +212,7 @@ if os_do_setor:
         with col_target:
             st.markdown(f"""
             <div class="{css_class}">
-                <div style="display:flex; justify-between; align-items:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
                     <b>{item['id']} | {item['maquina']}</b>
                     <small style="float: right;">⏱️ {item['hora']}</small>
                 </div>
@@ -228,6 +222,12 @@ if os_do_setor:
                 </div>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Botão para dar baixa na OS
+            if st.button(f"✅ Concluir {item['id']}", key=f"btn_baixa_{item['id']}", use_container_width=True):
+                st.session_state['lista_os'] = [os for os in st.session_state['lista_os'] if os['id'] != item['id']]
+                st.toast(f"OS {item['id']} concluída com sucesso!", icon="🎉")
+                st.rerun()
 else:
     st.info("✨ Nenhuma Ordem de Serviço aberta para este setor no momento.")
 
