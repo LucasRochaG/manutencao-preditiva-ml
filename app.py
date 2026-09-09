@@ -7,40 +7,40 @@ from datetime import datetime
 # CONFIGURAÇÃO DA PÁGINA
 # ==============================================================================
 st.set_page_config(
-    page_title="INJEX PREDITIX 4.0",
+    page_title="MANTIS 4.0 - Inteligência em Manutenção",
     page_icon="💉",
     layout="wide"
 )
 
 # Mapeamento de 10 Máquinas por Setor
 MAQUINAS_POR_SETOR = {
-    "Injetora": [f"INJ-{i:02d} (Injetora {i})" for i in range(1, 11)],
-    "Montagem": [f"MONT-{i:02d} (Montagem {i})" for i in range(1, 11)],
-    "Embalagem": [f"EMB-{i:02d} (Embalagem {i})" for i in range(1, 11)]
+    "Injetora Plástica": [f"INJ-{i:02d} (Injetora {i})" for i in range(1, 11)],
+    "Linha de Montagem": [f"MONT-{i:02d} (Montagem {i})" for i in range(1, 11)],
+    "Embalagem & Selagem": [f"EMB-{i:02d} (Embalagem {i})" for i in range(1, 11)]
 }
 
 # Inicialização do session_state
 if 'lista_os' not in st.session_state:
     st.session_state['lista_os'] = [
-        {"id": "OS-1001", "setor": "Injetora", "maquina": "INJ-01 (Injetora 1)", "defeito": "Vazamento de óleo no cilindro", "prioridade": "Alta", "hora_abertura": "08:15"},
-        {"id": "OS-1002", "setor": "Injetora", "maquina": "INJ-05 (Injetora 5)", "defeito": "Ruído no exaustor", "prioridade": "Média", "hora_abertura": "09:30"},
-        {"id": "OS-1004", "setor": "Embalagem", "maquina": "EMB-03 (Embalagem 3)", "defeito": "Falha na resistência", "prioridade": "Alta", "hora_abertura": "10:11"}
+        {"id": "OS-1001", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Vazamento de óleo no cilindro", "prioridade": "Alta", "hora_abertura": "08:15"},
+        {"id": "OS-1002", "setor": "Injetora Plástica", "maquina": "INJ-05 (Injetora 5)", "defeito": "Ruído no exaustor", "prioridade": "Média", "hora_abertura": "09:30"},
+        {"id": "OS-1004", "setor": "Embalagem & Selagem", "maquina": "EMB-03 (Embalagem 3)", "defeito": "Falha na resistência", "prioridade": "Alta", "hora_abertura": "10:11"}
     ]
 
 if 'em_andamento_os' not in st.session_state:
     st.session_state['em_andamento_os'] = [
-        {"id": "OS-1003", "setor": "Montagem", "maquina": "MONT-02 (Montagem 2)", "defeito": "Ajuste na garra pneumática", "prioridade": "Baixa", "hora_abertura": "10:05", "hora_inicio": "10:20"}
+        {"id": "OS-1003", "setor": "Linha de Montagem", "maquina": "MONT-02 (Montagem 2)", "defeito": "Ajuste na garra pneumática", "prioridade": "Baixa", "hora_abertura": "10:05", "hora_inicio": "10:20"}
     ]
 
 if 'historico_os' not in st.session_state:
     st.session_state['historico_os'] = [
-        {"id": "OS-0998", "setor": "Injetora", "maquina": "INJ-01 (Injetora 1)", "defeito": "Troca de resistência Z2", "prioridade": "Média", "hora_abertura": "06:20", "hora_inicio": "06:25", "hora_conclusao": "07:10", "status": "Concluída"}
+        {"id": "OS-0998", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Troca de resistência Z2", "prioridade": "Média", "hora_abertura": "06:20", "hora_inicio": "06:25", "hora_conclusao": "07:10", "status": "Concluída"}
     ]
 
 # Estilo CSS Personalizado
 st.markdown("""
 <style>
-    .stMetric { background-color: #1f2937; padding: 6px; border-radius: 6px; }
+    .stMetric { background-color: #1f2937; padding: 10px; border-radius: 8px; }
     .iot-card {
         background-color: #0f172a;
         border: 1px dashed #38bdf8;
@@ -52,11 +52,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# BARRA LATERAL: BOTÕES DE NAVEGAÇÃO & FORMULÁRIO
+# BARRA LATERAL: NOME DO PROJETO & NAVEGAÇÃO
 # ==============================================================================
-st.sidebar.image("https://img.icons8.com/color/96/syringe.png", width=45)
-st.sidebar.markdown("### INJEX PREDITIX 4.0")
-st.sidebar.caption("Sistema Integrado Preditivo & PCM")
+st.sidebar.caption("🤖 PROJETO INDUSTRIAL")
+st.sidebar.markdown("### 🦾 MANTIS 4.0")
+st.sidebar.caption("Maintenance & Machine Intelligence System")
+st.sidebar.markdown("---")
 
 # NAVEGAÇÃO EM FORMA DE BOTÃO (PAINEL / FÁBRICA)
 if 'pagina_ativa' not in st.session_state:
@@ -75,17 +76,17 @@ st.sidebar.markdown("---")
 
 # SELEÇÃO DE MÁQUINA (NO PAINEL)
 if st.session_state['pagina_ativa'] == "Painel":
-    setor_selecionado = st.sidebar.selectbox("Setor:", ["Injetora", "Montagem", "Embalagem"])
+    setor_selecionado = st.sidebar.selectbox("Setor:", ["Injetora Plástica", "Linha de Montagem", "Embalagem & Selagem"])
     maquinas_disponiveis = MAQUINAS_POR_SETOR[setor_selecionado]
     maquina_selecionada = st.sidebar.selectbox("Máquina:", maquinas_disponiveis)
     st.sidebar.markdown("---")
 else:
-    setor_selecionado = "Injetora"
-    maquina_selecionada = MAQUINAS_POR_SETOR["Injetora"][0]
+    setor_selecionado = "Injetora Plástica"
+    maquina_selecionada = MAQUINAS_POR_SETOR["Injetora Plástica"][0]
 
 # ABERTURA RÁPIDA DE OS
 st.sidebar.markdown("##### 📝 Nova OS")
-os_setor = st.sidebar.selectbox("Setor Destino:", ["Injetora", "Montagem", "Embalagem"], key="os_setor_select")
+os_setor = st.sidebar.selectbox("Setor Destino:", ["Injetora Plástica", "Linha de Montagem", "Embalagem & Selagem"], key="os_setor_select")
 maquinas_form_dinamicas = MAQUINAS_POR_SETOR[os_setor]
 
 with st.sidebar.form(key="form_os_simplificada", clear_on_submit=True):
@@ -110,11 +111,11 @@ if submit_os:
     else:
         st.sidebar.error("Informe o problema.")
 
-# Preventive Data
+# Dados de Preventiva
 def get_preventiva_dados(maquina_nome):
     tag = maquina_nome.split(' ')[0]
     return {
-        "tempo": "2h",
+        "tempo": "2 horas",
         "pecas_por_tipo": {
             "🔩 Mecânica": [f"Bujões {tag}", "Anel Guia"],
             "💨 Pneumática": [f"Filtro {tag}", "Válvula Solenóide"],
@@ -128,9 +129,9 @@ info_prev = get_preventiva_dados(maquina_selecionada)
 # PÁGINA: FÁBRICA (VISÃO GERAL DIVIDIDA EM 3 SUB-MENUS POR SETOR)
 # ==============================================================================
 if st.session_state['pagina_ativa'] == "Fábrica":
-    st.markdown("### 🌐 Visão Geral Fábrica — INJEX PREDITIX 4.0")
+    st.markdown("### 🌐 Visão Geral Fábrica — MANTIS 4.0")
     
-    # GRÁFICO RESUMO DE DEMANDAS
+    # RESUMO DAS ORDENS DE SERVIÇO
     df_os_todas = pd.DataFrame(st.session_state['lista_os'] + st.session_state['em_andamento_os'] + st.session_state['historico_os'])
     if not df_os_todas.empty:
         col_g1, col_g2 = st.columns([2, 1])
@@ -141,12 +142,12 @@ if st.session_state['pagina_ativa'] == "Fábrica":
         with col_g2:
             st.metric("Total de OSs Registradas", len(df_os_todas))
             st.metric("Em Atendimento Agora", len(st.session_state['em_andamento_os']))
-            st.metric("Taxa de Resolução", f"{int((len(st.session_state['historico_os'])/len(df_os_todas))*100)}%")
+            st.metric("Taxa de Resolução de Problemas", f"{int((len(st.session_state['historico_os'])/len(df_os_todas))*100)}%")
 
     st.markdown("---")
 
-    # 3 MENUS/ABAS PARA CADA SETOR
-    tab_inj, tab_mont, tab_emb = st.tabs(["🏢 Injetora", "🏢 Montagem", "🏢 Embalagem"])
+    # 3 MENUS/ABAS PARA CADA SETOR COM SEUS NOMES COMPLETOS
+    tab_inj, tab_mont, tab_emb = st.tabs(["🏢 Injetora Plástica", "🏢 Linha de Montagem", "🏢 Embalagem & Selagem"])
 
     def render_tabela_setor(setor_nome):
         col_ab, col_and, col_res = st.columns(3)
@@ -154,11 +155,11 @@ if st.session_state['pagina_ativa'] == "Fábrica":
         # OS ABERTAS
         with col_ab:
             os_ab = [o for o in st.session_state['lista_os'] if o['setor'] == setor_nome]
-            st.markdown(f"##### 🔴 Paradas/Abertas ({len(os_ab)})")
+            st.markdown(f"##### 🔴 Paradas / Abertas ({len(os_ab)})")
             if os_ab:
                 for item in os_ab:
-                    st.markdown(f"**{item['id']}** | {item['maquina'].split(' ')[0]}")
-                    st.caption(f"⚠️ {item['defeito']} | {item['prioridade']} | {item.get('hora_abertura','')}")
+                    st.markdown(f"**{item['id']}** | {item['maquina']}")
+                    st.caption(f"⚠️ {item['defeito']} | Prioridade: {item['prioridade']} | Abertura: {item.get('hora_abertura','')}")
                     if st.button(f"▶️ Iniciar {item['id']}", key=f"f_in_{setor_nome}_{item['id']}", use_container_width=True):
                         os_and = item.copy()
                         os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
@@ -167,16 +168,16 @@ if st.session_state['pagina_ativa'] == "Fábrica":
                         st.rerun()
                     st.divider()
             else:
-                st.caption("Sem OSs abertas.")
+                st.caption("Nenhuma ordem aberta neste setor.")
 
         # OS EM ANDAMENTO
         with col_and:
             os_and = [o for o in st.session_state['em_andamento_os'] if o['setor'] == setor_nome]
-            st.markdown(f"##### ⚙️ Em Andamento ({len(os_and)})")
+            st.markdown(f"##### ⚙️ Em Atendimento ({len(os_and)})")
             if os_and:
                 for item in os_and:
-                    st.markdown(f"**{item['id']}** | {item['maquina'].split(' ')[0]}")
-                    st.caption(f"🛠️ {item['defeito']} | Início: {item.get('hora_inicio','')}")
+                    st.markdown(f"**{item['id']}** | {item['maquina']}")
+                    st.caption(f"🛠️ {item['defeito']} | Início do serviço: {item.get('hora_inicio','')}")
                     if st.button(f"✅ Finalizar {item['id']}", key=f"f_fin_{setor_nome}_{item['id']}", use_container_width=True):
                         os_conc = item.copy()
                         os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
@@ -186,16 +187,16 @@ if st.session_state['pagina_ativa'] == "Fábrica":
                         st.rerun()
                     st.divider()
             else:
-                st.caption("Nenhum atendimento.")
+                st.caption("Nenhum atendimento em execução.")
 
         # OS RESOLVIDAS
         with col_res:
             os_res = [o for o in st.session_state['historico_os'] if o['setor'] == setor_nome]
-            st.markdown(f"##### ✅ Resolvidas ({len(os_res)})")
+            st.markdown(f"##### ✅ Concluídas / Resolvidas ({len(os_res)})")
             if os_res:
                 for item in os_res:
-                    st.markdown(f"**{item['id']}** | {item['maquina'].split(' ')[0]}")
-                    st.caption(f"✔️ {item['defeito']} | Fim: {item.get('hora_conclusao','')}")
+                    st.markdown(f"**{item['id']}** | {item['maquina']}")
+                    st.caption(f"✔️ {item['defeito']} | Conclusão: {item.get('hora_conclusao','')}")
                     if st.button(f"🔄 Reabrir {item['id']}", key=f"f_re_{setor_nome}_{item['id']}", use_container_width=True):
                         os_reab = {
                             "id": item["id"], "setor": item["setor"], "maquina": item["maquina"],
@@ -207,36 +208,37 @@ if st.session_state['pagina_ativa'] == "Fábrica":
                         st.rerun()
                     st.divider()
             else:
-                st.caption("Nenhum histórico.")
+                st.caption("Sem histórico recente neste setor.")
 
     with tab_inj:
-        render_tabela_setor("Injetora")
+        render_tabela_setor("Injetora Plástica")
     with tab_mont:
-        render_tabela_setor("Montagem")
+        render_tabela_setor("Linha de Montagem")
     with tab_emb:
-        render_tabela_setor("Embalagem")
+        render_tabela_setor("Embalagem & Selagem")
 
 # ==============================================================================
 # PÁGINA: PAINEL DA MÁQUINA INDIVIDUAL
 # ==============================================================================
 else:
-    st.markdown(f"### ⚙️ {maquina_selecionada}")
+    # TÍTULO EXIBINDO O SETOR COMPLETO JUNTO DA MÁQUINA SELECIONADA
+    st.markdown(f"### 🏢 Setor: **{setor_selecionado}** | ⚙️ **{maquina_selecionada}**")
 
     tab_principal, tab_preventiva, tab_abertas, tab_andamento, tab_historico = st.tabs([
-        "📊 Telemetria", "🛠️ Preventiva", "📌 Abertas", "⚙️ Andamento", "✅ Resolvidas"
+        "📊 Telemetria", "🛠️ Plano Preventivo", "📌 OSs Abertas", "⚙️ Em Atendimento", "✅ Histórico"
     ])
 
     with tab_principal:
-        if setor_selecionado == "Injetora":
+        if setor_selecionado == "Injetora Plástica":
             col_c1, col_c2, col_c3 = st.columns(3)
-            temp_canhao = col_c1.slider("Temp. Canhão (°C)", 180.0, 260.0, 220.0)
-            temp_molde = col_c2.slider("Temp. Molde (°C)", 15.0, 70.0, 32.0)
-            pressao_recalque = col_c3.slider("Pressão (bar)", 50.0, 160.0, 95.0)
+            temp_canhao = col_c1.slider("Temperatura do Canhão (°C)", 180.0, 260.0, 220.0)
+            temp_molde = col_c2.slider("Temperatura do Molde (°C)", 15.0, 70.0, 32.0)
+            pressao_recalque = col_c3.slider("Pressão de Recalque (bar)", 50.0, 160.0, 95.0)
             risco = min(100.0, (pressao_recalque * temp_molde) / 80)
         else:
             col_c1, col_c2 = st.columns(2)
-            param1 = col_c1.slider("Pressão (bar)", 4.0, 10.0, 6.5)
-            param2 = col_c2.slider("Velocidade (pç/min)", 100, 300, 240)
+            param1 = col_c1.slider("Pressão da Linha (bar)", 4.0, 10.0, 6.5)
+            param2 = col_c2.slider("Velocidade do Ciclo (peças/min)", 100, 300, 240)
             risco = 15.0 if param1 >= 5.5 else 75.0
 
         disp = max(60, int(98 - (risco * 0.3)))
@@ -244,33 +246,34 @@ else:
         qual = max(80, int(99 - (risco * 0.4)))
         oee = int((disp/100) * (perf/100) * (qual/100) * 100)
 
-        # METRICAS
+        # NOMES COMPLETOS PARA OS INDICADORES DE EFICIÊNCIA
+        st.markdown("##### 📉 Indicadores de Desempenho Operacional")
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Disp.", f"{disp}%")
-        m2.metric("Perf.", f"{perf}%")
-        m3.metric("Qual.", f"{qual}%")
-        m4.metric("OEE Global", f"{oee}%")
+        m1.metric("Disponibilidade da Máquina", f"{disp}%")
+        m2.metric("Performance de Produção", f"{perf}%")
+        m3.metric("Qualidade do Produto", f"{qual}%")
+        m4.metric("Eficiência Global (OEE)", f"{oee}%")
 
         st.progress(int(risco))
         if risco < 35:
-            st.success("🟢 Operação Normal")
+            st.success("🟢 Operação Normal — Preditiva OK")
         elif 35 <= risco < 65:
-            st.warning("🟡 Atenção Preditiva")
+            st.warning("🟡 Modo de Atenção — Desvio Detectado")
         else:
-            st.error("🔴 Risco Crítico de Parada")
+            st.error("🔴 Risco Crítico — Alta Probabilidade de Parada")
 
         st.markdown("---")
 
-        # GRÁFICO DE TELEMETRIA NATIVO
-        st.markdown("##### 📈 Telemetria Contínua de Processo (Últimos minutos)")
+        # GRÁFICO DE TELEMETRIA
+        st.markdown("##### 📈 Telemetria em Tempo Real (Últimas medições)")
         df_chart = pd.DataFrame({
-            "Pressão (bar)": np.random.normal(loc=100, scale=2, size=20),
-            "Temperatura (°C)": np.random.normal(loc=220, scale=5, size=20)
+            "Pressão do Sistema (bar)": np.random.normal(loc=100, scale=2, size=20),
+            "Temperatura Interna (°C)": np.random.normal(loc=220, scale=5, size=20)
         })
         st.line_chart(df_chart)
 
     with tab_preventiva:
-        st.caption(f"Tempo estimado de intervenção: {info_prev['tempo']}")
+        st.caption(f"Tempo estimado de parada programada: {info_prev['tempo']}")
         cols_cat = st.columns(3)
         for idx, (cat, pecas) in enumerate(info_prev['pecas_por_tipo'].items()):
             with cols_cat[idx]:
@@ -282,7 +285,7 @@ else:
         os_ab = [o for o in st.session_state['lista_os'] if o['setor'] == setor_selecionado]
         if os_ab:
             for item in os_ab:
-                st.write(f"**{item['id']}** ({item['maquina'].split(' ')[0]}) - {item['defeito']}")
+                st.write(f"**{item['id']}** ({item['maquina']}) - Defeito: {item['defeito']}")
                 if st.button(f"▶️ Atender {item['id']}", key=f"p_in_{item['id']}"):
                     os_and = item.copy()
                     os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
@@ -290,13 +293,13 @@ else:
                     st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
                     st.rerun()
         else:
-            st.caption("Sem OSs abertas para este setor.")
+            st.caption("Nenhuma ordem de serviço aberta para este setor.")
 
     with tab_andamento:
         os_and = [o for o in st.session_state['em_andamento_os'] if o['setor'] == setor_selecionado]
         if os_and:
             for item in os_and:
-                st.write(f"🛠️ **{item['id']}** ({item['maquina'].split(' ')[0]}) - {item['defeito']}")
+                st.write(f"🛠️ **{item['id']}** ({item['maquina']}) - Defeito: {item['defeito']}")
                 if st.button(f"✅ Finalizar {item['id']}", key=f"p_fin_{item['id']}"):
                     os_conc = item.copy()
                     os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
@@ -305,35 +308,35 @@ else:
                     st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
                     st.rerun()
         else:
-            st.caption("Sem manutenções em andamento neste setor.")
+            st.caption("Nenhuma manutenção em andamento para este setor.")
 
     with tab_historico:
         os_res = [o for o in st.session_state['historico_os'] if o['setor'] == setor_selecionado]
         if os_res:
             for item in os_res:
-                st.write(f"✅ **{item['id']}** ({item['maquina'].split(' ')[0]}) - {item['defeito']}")
+                st.write(f"✅ **{item['id']}** ({item['maquina']}) - Solucionado: {item['defeito']}")
         else:
-            st.caption("Sem histórico para este setor.")
+            st.caption("Nenhum histórico registrado para este setor.")
 
 # ==============================================================================
 # RODAPÉ: MÓDULO DE CONEXÃO IOT / CLP (AGUARDANDO DADOS DA MÁQUINA)
 # ==============================================================================
 st.markdown("---")
-tag_maquina_atual = maquina_selecionada.split(' ')[0] if st.session_state['pagina_ativa'] == "Painel" else "FÁBRICA-GENERAL"
+tag_maquina_atual = maquina_selecionada if st.session_state['pagina_ativa'] == "Painel" else "PLANT-GLOBAL"
 
 st.markdown(f"""
 <div class="iot-card">
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <b style="color: #38bdf8;">📡 Gateway IoT & CLP Direct Link (OPC-UA / MQTT)</b><br>
-            <small style="color: #94a3b8;">Endereço IP: 192.168.10.{np.random.randint(10,99)} | Máquina Alvo: <b>{tag_maquina_atual}</b></small>
+            <b style="color: #38bdf8;">📡 MANTIS IoT Connect — Modbus TCP / OPC-UA Protocol</b><br>
+            <small style="color: #94a3b8;">Endereço de Rede IP: 192.168.10.{np.random.randint(10,99)} | Alvo da Leitura: <b>{tag_maquina_atual}</b></small>
         </div>
         <div>
-            <span style="background-color: #0284c7; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem;">⏳ Aguardando Conexão Direta...</span>
+            <span style="background-color: #0284c7; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem;">⏳ Aguardando Conexão com CLP...</span>
         </div>
     </div>
     <div style="margin-top: 8px; font-family: monospace; font-size: 0.8rem; color: #64748b;">
-        [SYSTEM LOG]: Handshake enviado via Modbus TCP. Aguardando pacotes de telemetria bruta da CLP... (0 bytes recebidos)
+        [MANTIS SYSTEM LOG]: Solicitando fluxo continuo de pacotes do controlador do setor ({setor_selecionado}). Sinal aguardando sincronização... (0 kb/s)
     </div>
 </div>
 """, unsafe_allow_html=True)
