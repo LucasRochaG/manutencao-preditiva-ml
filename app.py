@@ -59,7 +59,6 @@ if 'aba_ativa' not in st.session_state:
 # ==============================================================================
 st.markdown("""
 <style>
-    /* Estilização Geral de Cartões Industriais */
     .industrial-card {
         background-color: #111827;
         border: 1px solid #1f2937;
@@ -73,12 +72,10 @@ st.markdown("""
     .card-warning { border-left-color: #f59e0b !important; }
     .card-success { border-left-color: #10b981 !important; }
 
-    /* Badges de Perfis */
     .badge-adm { background-color: #dc2626; color: white; padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.5px; }
     .badge-mec { background-color: #10b981; color: white; padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.5px; }
     .badge-op  { background-color: #3b82f6; color: white; padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.5px; }
 
-    /* Caixa CLP Telemetria */
     .iot-banner-waiting {
         background: #1e293b;
         border: 1px dashed #64748b;
@@ -117,6 +114,7 @@ if not st.session_state['autenticado']:
     with st.sidebar.expander("🔐 Credenciais de Acesso", expanded=True):
         mat_input = st.text_input("Matrícula ID:", key="mat_discreto", placeholder="Ex: ADM01, M001")
         senha_input = st.text_input("Senha de Acesso:", type="password", key="senha_discreto")
+        
         if st.button("Autenticar Sistema", use_container_width=True):
             mat_limpa = mat_input.strip()
             if mat_limpa in st.session_state['usuarios_db']:
@@ -133,6 +131,9 @@ if not st.session_state['autenticado']:
                     st.error("Senha incorreta.")
             else:
                 st.error("Matrícula não cadastrada.")
+                # Dica automática para facilitar os testes
+                matriculas_disponiveis = ", ".join(st.session_state['usuarios_db'].keys())
+                st.info(f"💡 **Dica de Acesso:** Utilize uma das matrículas válidas: `{matriculas_disponiveis}` (Senha padrão: `123`)")
 else:
     usuario = st.session_state['usuario_logado']
     if usuario['perfil'] == "Administrador":
@@ -157,7 +158,6 @@ st.sidebar.markdown("---")
 col_nav1, col_nav2 = st.sidebar.columns(2)
 
 with col_nav1:
-    # Se ativo, usamos primary (cor destacada), senão secondary
     tipo_btn_1 = "primary" if st.session_state['aba_ativa'] == "🖥️ Painel" else "secondary"
     if st.button("🖥️ Painel", use_container_width=True, type=tipo_btn_1):
         st.session_state['aba_ativa'] = "🖥️ Painel"
@@ -307,7 +307,6 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
     def render_tabela_setor(setor_nome):
         col_ab, col_and, col_res = st.columns(3, gap="medium")
         
-        # 1. OS ABERTAS
         with col_ab:
             os_ab = [o for o in st.session_state['lista_os'] if o['setor'] == setor_nome]
             st.markdown(f"#### 🔴 Abertas ({len(os_ab)})")
@@ -334,7 +333,6 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
             else:
                 st.info("Nenhuma ordem aberta neste setor.")
 
-        # 2. OS EM ANDAMENTO
         with col_and:
             os_and = [o for o in st.session_state['em_andamento_os'] if o['setor'] == setor_nome]
             st.markdown(f"#### ⚙️ Em Atendimento ({len(os_and)})")
@@ -367,7 +365,6 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
             else:
                 st.info("Nenhuma manutenção em andamento.")
 
-        # 3. OS CONCLUÍDAS
         with col_res:
             os_res = [o for o in st.session_state['historico_os'] if o['setor'] == setor_nome]
             st.markdown(f"#### ✅ Concluídas ({len(os_res)})")
@@ -413,7 +410,6 @@ else:
     
     tag_maquina_atual = maquina_selecionada.split(' ')[0]
     
-    # Gerenciador interativo de conexão do CLP (Simulação de ligar/desligar conexão)
     if 'clp_conectado' not in st.session_state:
         st.session_state['clp_conectado'] = False
 
