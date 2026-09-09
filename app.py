@@ -1,13 +1,14 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.express as px
 from datetime import datetime
 
 # ==============================================================================
 # CONFIGURAÇÃO DA PÁGINA
 # ==============================================================================
 st.set_page_config(
-    page_title="Injex Cirúrgica - Gestão Preditiva",
+    page_title="INJEX PREDITIX 4.0",
     page_icon="💉",
     layout="wide"
 )
@@ -41,20 +42,24 @@ if 'historico_os' not in st.session_state:
 st.markdown("""
 <style>
     .stMetric { background-color: #1f2937; padding: 6px; border-radius: 6px; }
-    .os-card-alta { background-color: #450a0a; border-left: 4px solid #dc2626; padding: 6px; border-radius: 4px; color: #fef2f2; font-size: 0.85rem; }
-    .os-card-media { background-color: #451a03; border-left: 4px solid #d97706; padding: 6px; border-radius: 4px; color: #fffbeb; font-size: 0.85rem; }
-    .os-card-baixa { background-color: #052e16; border-left: 4px solid #16a34a; padding: 6px; border-radius: 4px; color: #f0fdf4; font-size: 0.85rem; }
+    .iot-card {
+        background-color: #0f172a;
+        border: 1px dashed #38bdf8;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 20px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
 # BARRA LATERAL: BOTÕES DE NAVEGAÇÃO & FORMULÁRIO
 # ==============================================================================
-st.sidebar.image("https://img.icons8.com/color/96/syringe.png", width=50)
-st.sidebar.markdown("##### Injex Cirúrgica")
+st.sidebar.image("https://img.icons8.com/color/96/syringe.png", width=45)
+st.sidebar.markdown("### INJEX PREDITIX 4.0")
+st.sidebar.caption("Sistema Integrado Preditivo & PCM")
 
 # NAVEGAÇÃO EM FORMA DE BOTÃO (PAINEL / FÁBRICA)
-st.sidebar.caption("Menu")
 if 'pagina_ativa' not in st.session_state:
     st.session_state['pagina_ativa'] = "Painel"
 
@@ -69,7 +74,7 @@ if col_btn2.button("🌐 Fábrica", use_container_width=True, type="primary" if 
 
 st.sidebar.markdown("---")
 
-# SELEÇÃO DE MAQUINA (EXIBIDA APENAS SE ESTIVER NO PAINEL)
+# SELEÇÃO DE MÁQUINA (NO PAINEL)
 if st.session_state['pagina_ativa'] == "Painel":
     setor_selecionado = st.sidebar.selectbox("Setor:", ["Injetora", "Montagem", "Embalagem"])
     maquinas_disponiveis = MAQUINAS_POR_SETOR[setor_selecionado]
@@ -86,7 +91,7 @@ maquinas_form_dinamicas = MAQUINAS_POR_SETOR[os_setor]
 
 with st.sidebar.form(key="form_os_simplificada", clear_on_submit=True):
     os_maquina = st.selectbox("Máquina:", maquinas_form_dinamicas)
-    os_defeito = st.text_area("Problema:", placeholder="Descreva o problema...", height=70)
+    os_defeito = st.text_area("Problema:", placeholder="Descreva o problema...", height=60)
     os_prioridade = st.selectbox("Prioridade:", ["Alta", "Média", "Baixa"])
     submit_os = st.form_submit_button("🚀 Abrir OS")
 
@@ -106,7 +111,7 @@ if submit_os:
     else:
         st.sidebar.error("Informe o problema.")
 
-# Preventiva
+# Preventive Data
 def get_preventiva_dados(maquina_nome):
     tag = maquina_nome.split(' ')[0]
     return {
@@ -124,8 +129,26 @@ info_prev = get_preventiva_dados(maquina_selecionada)
 # PÁGINA: FÁBRICA (VISÃO GERAL DIVIDIDA EM 3 SUB-MENUS POR SETOR)
 # ==============================================================================
 if st.session_state['pagina_ativa'] == "Fábrica":
-    st.markdown("### 🌐 Visão Geral Fábrica")
+    st.markdown("### 🌐 Visão Geral Fábrica — INJEX PREDITIX 4.0")
     
+    # GRAFICO RESUMO DA FÁBRICA
+    df_os_todas = pd.DataFrame(st.session_state['lista_os'] + st.session_state['em_andamento_os'] + st.session_state['historico_os'])
+    if not df_os_todas.empty:
+        col_g1, col_g2 = st.columns([2, 1])
+        with col_g1:
+            fig_bar = px.histogram(df_os_todas, x="setor", color="prioridade", barmode="group",
+                                  title="Volume de Demandas por Setor Fabril",
+                                  color_discrete_map={"Alta": "#ef4444", "Média": "#f59e0b", "Baixa": "#10b981"},
+                                  height=230)
+            fig_bar.update_layout(margin=dict(l=20, r=20, t=35, b=20), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig_bar, use_container_width=True)
+        with col_g2:
+            st.metric("Total de OSs Registradas", len(df_os_todas))
+            st.metric("Em Atendimento Agordo", len(st.session_state['em_andamento_os']))
+            st.metric("Taxa de Resolução", f"{int((len(st.session_state['historico_os'])/len(df_os_todas))*100)}%")
+
+    st.markdown("---")
+
     # 3 MENUS/ABAS PARA CADA SETOR
     tab_inj, tab_mont, tab_emb = st.tabs(["🏢 Injetora", "🏢 Montagem", "🏢 Embalagem"])
 
@@ -192,10 +215,8 @@ if st.session_state['pagina_ativa'] == "Fábrica":
 
     with tab_inj:
         render_tabela_setor("Injetora")
-        
     with tab_mont:
         render_tabela_setor("Montagem")
-        
     with tab_emb:
         render_tabela_setor("Embalagem")
 
@@ -227,22 +248,52 @@ else:
         qual = max(80, int(99 - (risco * 0.4)))
         oee = int((disp/100) * (perf/100) * (qual/100) * 100)
 
+        # METRICAS
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Disp.", f"{disp}%")
         m2.metric("Perf.", f"{perf}%")
         m3.metric("Qual.", f"{qual}%")
-        m4.metric("OEE", f"{oee}%")
+        m4.metric("OEE Global", f"{oee}%")
 
         st.progress(int(risco))
         if risco < 35:
             st.success("🟢 Operação Normal")
         elif 35 <= risco < 65:
-            st.warning("🟡 Atenção")
+            st.warning("🟡 Atenção Preditiva")
         else:
-            st.error("🔴 Risco de Parada")
+            st.error("🔴 Risco Crítico de Parada")
+
+        st.markdown("---")
+
+        # GRÁFICOS DINÂMICOS DA MÁQUINA
+        col_g_left, col_g_right = st.columns([2, 1])
+
+        with col_g_left:
+            # Gráfico de Linhas / Área (Telemetria temporal)
+            df_chart = pd.DataFrame({
+                "Tempo (min)": list(range(1, 21)),
+                "Pressão": np.random.normal(loc=100, scale=2, size=20),
+                "Temperatura": np.random.normal(loc=220, scale=5, size=20)
+            })
+            fig_telemetry = px.line(df_chart, x="Tempo (min)", y=["Pressão", "Temperatura"],
+                                    title="📈 Telemetria Contínua de Processo (Últimos 20 min)",
+                                    height=250)
+            fig_telemetry.update_layout(margin=dict(l=10, r=10, t=30, b=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig_telemetry, use_container_width=True)
+
+        with col_g_right:
+            # Gráfico Donut OEE
+            df_oee = pd.DataFrame({
+                "Categoria": ["Eficiência Operacional", "Perdas de Processo"],
+                "Valor": [oee, 100 - oee]
+            })
+            fig_donut = px.pie(df_oee, values="Valor", names="Categoria", hole=0.6,
+                               title="🍩 OEE Balance", color_discrete_sequence=["#10b981", "#ef4444"], height=250)
+            fig_donut.update_layout(margin=dict(l=10, r=10, t=30, b=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", showlegend=False)
+            st.plotly_chart(fig_donut, use_container_width=True)
 
     with tab_preventiva:
-        st.caption(f"Tempo estimado: {info_prev['tempo']}")
+        st.caption(f"Tempo estimado de intervenção: {info_prev['tempo']}")
         cols_cat = st.columns(3)
         for idx, (cat, pecas) in enumerate(info_prev['pecas_por_tipo'].items()):
             with cols_cat[idx]:
@@ -286,3 +337,26 @@ else:
                 st.write(f"✅ **{item['id']}** ({item['maquina'].split(' ')[0]}) - {item['defeito']}")
         else:
             st.caption("Sem histórico para este setor.")
+
+# ==============================================================================
+# RODAPÉ: MÓDULO DE CONEXÃO IOT / CLP (AGUARDANDO DADOS DA MÁQUINA)
+# ==============================================================================
+st.markdown("---")
+tag_maquina_atual = maquina_selecionada.split(' ')[0] if st.session_state['pagina_ativa'] == "Painel" else "FÁBRICA-GENERAL"
+
+st.markdown(f"""
+<div class="iot-card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <b style="color: #38bdf8;">📡 Gateway IoT & CLP Direct Link (OPC-UA / MQTT)</b><br>
+            <small style="color: #94a3b8;">Endereço IP: 192.168.10.{np.random.randint(10,99)} | Máquina Alvo: <b>{tag_maquina_atual}</b></small>
+        </div>
+        <div>
+            <span style="background-color: #0284c7; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem;">⏳ Aguardando Conexão Direta...</span>
+        </div>
+    </div>
+    <div style="margin-top: 8px; font-family: monospace; font-size: 0.8rem; color: #64748b;">
+        [SYSTEM LOG]: Handshake enviado via Modbus TCP. Aguardando pacotes de telemetria bruta da CLP... (0 bytes recebidos)
+    </div>
+</div>
+""", unsafe_allow_html=True)
