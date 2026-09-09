@@ -12,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inicialização da Lista de OSs Abertas
+# Inicialização segura da Lista de OSs Abertas
 if 'lista_os' not in st.session_state:
     st.session_state['lista_os'] = [
         {
@@ -43,8 +43,7 @@ if 'em_andamento_os' not in st.session_state:
             "defeito": "Ajuste na garra pneumática do êmbolo",
             "prioridade": "Baixa",
             "hora_abertura": "10:05:44",
-            "hora_inicio": "10:20:15",
-            "tecnico": "Técnico Mão de Obra"
+            "hora_inicio": "10:20:15"
         }
     ]
 
@@ -172,7 +171,7 @@ st.sidebar.markdown(f"""
 
 st.sidebar.markdown("---")
 
-# FORMULÁRIO DE ABERTURA RÁPIDA DE OS (SIDEBAR - LIMPEZA AUTOMÁTICA)
+# FORMULÁRIO DE ABERTURA RÁPIDA DE OS
 st.sidebar.subheader("📝 Abertura Rápida de OS")
 
 with st.sidebar.form(key="form_os_simplificada", clear_on_submit=True):
@@ -200,155 +199,23 @@ if submit_os:
         st.sidebar.error("Descreva o defeito antes de enviar.")
 
 # ==============================================================================
-# ESTRUTURA DE ABAS NA TELA PRINCIPAL
+# ESTRUTURA DE ABAS NA TELA PRINCIPAL (PRINCIPAL EMPRIMEIRO LUGAR)
 # ==============================================================================
 st.title(f"🏭 Injex Cirúrgica | {maquina_selecionada}")
 
-tab_abertas, tab_andamento, tab_historico, tab_telemetria = st.tabs([
+tab_principal, tab_abertas, tab_andamento, tab_historico = st.tabs([
+    "📊 Visão Geral & Telemetria", 
     "📌 OSs Abertas", 
     "⚙️ Em Andamento", 
-    "✅ Histórico / Resolvidas", 
-    "🎛️ Telemetria & OEE"
+    "✅ Histórico / Resolvidas"
 ])
 
 # ------------------------------------------------------------------------------
-# ABA 1: OSs ABERTAS (PENDENTES DE ATENDIMENTO)
+# ABA 1: VISÃO GERAL DA MÁQUINA, TELEMETRIA E OEE (MENU PRINCIPAL)
 # ------------------------------------------------------------------------------
-with tab_abertas:
-    st.subheader(f"📌 Chamados Aguardando Atendimento no Setor: {setor_selecionado}")
-
-    os_abertas_setor = [os for os in st.session_state['lista_os'] if os['setor'] == setor_selecionado]
-
-    if os_abertas_setor:
-        cols_os = st.columns(min(len(os_abertas_setor), 4))
-        
-        for idx, item in enumerate(os_abertas_setor):
-            col_target = cols_os[idx % 4]
-            
-            if item['prioridade'] == "Alta":
-                css_class = "os-card-alta"
-                icone = "🔴 ALTA"
-            elif item['prioridade'] == "Média":
-                css_class = "os-card-media"
-                icone = "🟡 MÉDIA"
-            else:
-                css_class = "os-card-baixa"
-                icone = "🟢 BAIXA"
-                
-            with col_target:
-                st.markdown(f"""
-                <div class="{css_class}">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <b>{item['id']} | {item['maquina']}</b>
-                        <small style="float: right;">⏱️ {item['hora_abertura']}</small>
-                    </div>
-                    <div style="margin-top: 4px; font-size: 0.9em;">
-                        <b>Prioridade:</b> {icone}<br>
-                        <b>Defeito:</b> {item['defeito']}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Ação de Mover para "Em Andamento"
-                if st.button(f"▶️ Iniciar Atendimento {item['id']}", key=f"btn_iniciar_{item['id']}", use_container_width=True):
-                    os_andamento = item.copy()
-                    os_andamento["hora_inicio"] = datetime.now().strftime('%H:%M:%S')
-                    
-                    st.session_state['em_andamento_os'].insert(0, os_andamento)
-                    st.session_state['lista_os'] = [os for os in st.session_state['lista_os'] if os['id'] != item['id']]
-                    st.toast(f"OS {item['id']} movida para Em Andamento!", icon="⚙️")
-                    st.rerun()
-    else:
-        st.info("✨ Nenhuma Ordem de Serviço aberta aguardando atendimento para este setor.")
-
-# ------------------------------------------------------------------------------
-# ABA 2: OSs EM ANDAMENTO (MANUTENÇÃO EM EXECUÇÃO)
-# ------------------------------------------------------------------------------
-with tab_andamento:
-    st.subheader(f"⚙️ Manutenções em Execução no Setor: {setor_selecionado}")
-
-    os_andamento_setor = [os for os in st.session_state['em_andamento_os'] if os['setor'] == setor_selecionado]
-
-    if os_andamento_setor:
-        for idx, item_and in enumerate(os_andamento_setor):
-            col_info, col_acao = st.columns([3, 1])
-            
-            with col_info:
-                st.write(f"🛠️ **{item_and['id']}** | **Máquina:** {item_and['maquina']} | **Abertura:** {item_and['hora_abertura']} | **Início Atendimento:** {item_and['hora_inicio']}")
-                st.caption(f"Sintoma: {item_and['defeito']} (Prioridade: {item_and['prioridade']})")
-                
-            with col_acao:
-                # Ação de Finalizar e Enviar para o Histórico de Concluídas
-                if st.button(f"✅ Concluir {item_and['id']}", key=f"btn_concluir_{item_and['id']}", use_container_width=True):
-                    os_concluida = item_and.copy()
-                    os_concluida["hora_conclusao"] = datetime.now().strftime('%H:%M:%S')
-                    os_concluida["status"] = "Concluída"
-                    
-                    st.session_state['historico_os'].insert(0, os_concluida)
-                    st.session_state['em_andamento_os'] = [os for os in st.session_state['em_andamento_os'] if os['id'] != item_and['id']]
-                    st.toast(f"OS {item_and['id']} concluída com sucesso!", icon="🎉")
-                    st.rerun()
-            st.divider()
-    else:
-        st.info("✨ Nenhuma manutenção em execução no momento para este setor.")
-
-# ------------------------------------------------------------------------------
-# ABA 3: HISTÓRICO DE OSs CONCLUÍDAS (COM REABERTURA)
-# ------------------------------------------------------------------------------
-with tab_historico:
-    st.subheader(f"✅ Histórico de OSs Resolvidas no Setor: {setor_selecionado}")
+with tab_principal:
+    st.subheader("🎛️ Painel de Telemetria CLP em Tempo Real")
     
-    historico_setor = [os for os in st.session_state['historico_os'] if os['setor'] == setor_selecionado]
-    
-    if historico_setor:
-        col_h1, col_h2, col_h3 = st.columns(3)
-        col_h1.metric("OSs Encerradas (Este Setor)", len(historico_setor))
-        col_h2.metric("Status PCM", "100% Auditado")
-        col_h3.metric("Última Resolução", historico_setor[0]['hora_conclusao'])
-        
-        st.markdown("---")
-        
-        for idx, item_hist in enumerate(historico_setor):
-            c_info, c_acao = st.columns([4, 1])
-            
-            with c_info:
-                st.write(f"✅ **{item_hist['id']}** | **Máquina:** {item_hist['maquina']} | **Abertura:** {item_hist.get('hora_abertura')} | **Conclusão:** {item_hist['hora_conclusao']}")
-                st.caption(f"Defeito Resolvido: {item_hist['defeito']} (Prioridade: {item_hist['prioridade']})")
-            
-            with c_acao:
-                # Botão para REABRIR a OS (envia de volta para Abertas)
-                if st.button(f"🔄 Reabrir {item_hist['id']}", key=f"btn_reabrir_{item_hist['id']}", use_container_width=True):
-                    os_reaberta = {
-                        "id": item_hist["id"],
-                        "setor": item_hist["setor"],
-                        "maquina": item_hist["maquina"],
-                        "defeito": item_hist["defeito"],
-                        "prioridade": item_hist["prioridade"],
-                        "hora_abertura": datetime.now().strftime('%H:%M:%S')
-                    }
-                    st.session_state['lista_os'].insert(0, os_reaberta)
-                    st.session_state['historico_os'] = [os for os in st.session_state['historico_os'] if os['id'] != item_hist['id']]
-                    st.toast(f"OS {item_hist['id']} reaberta com sucesso!", icon="🔄")
-                    st.rerun()
-            st.divider()
-            
-        # Exportação em CSV
-        df_historico_setor = pd.DataFrame(historico_setor)
-        csv_historico = df_historico_setor.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Baixar Histórico do Setor em CSV",
-            data=csv_historico,
-            file_name=f"historico_injex_{setor_selecionado.split('.')[1].strip()}_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
-    else:
-        st.info(f"Nenhuma Ordem de Serviço foi concluída para o setor **{setor_selecionado}** neste turno.")
-
-# ------------------------------------------------------------------------------
-# ABA 4: TELEMETRIA E INDICADORES OEE
-# ------------------------------------------------------------------------------
-with tab_telemetria:
-    st.subheader("🎛️ Painel de Telemetria CLP")
     if setor_selecionado == "1. Injeção Plástica":
         col_c1, col_c2, col_c3 = st.columns(3)
         temp_canhao = col_c1.slider("Temp. Canhão (°C)", 180.0, 260.0, 220.0)
@@ -378,7 +245,7 @@ with tab_telemetria:
     col_p1, col_p2 = st.columns([1, 1])
 
     with col_p1:
-        st.subheader("🤖 Diagnóstico da IA")
+        st.subheader("🤖 Diagnóstico da Inteligência Artificial")
         st.progress(int(risco))
         st.write(f"**Risco Calculado:** `{risco:.1f}%`")
         if risco < 35:
@@ -389,7 +256,151 @@ with tab_telemetria:
             st.error("🔴 **RISCO DE PARADA DE LINHA**")
 
     with col_p2:
-        st.subheader("🔧 Componentes para Preventiva")
-        st.write(f"**Tempo Necessário Parada:** `{info_prev['tempo']}`")
+        st.subheader("🔧 Componentes da Preventiva")
+        st.write(f"**Tempo Estimado Parada:** `{info_prev['tempo']}`")
         for p in info_prev['pecas']:
             st.write(f"• {p}")
+
+    st.markdown("---")
+    st.subheader("📈 Estabilidade de Processo")
+    chart_data = pd.DataFrame(
+        np.random.normal(loc=100, scale=3, size=(20, 2)),
+        columns=["Pressão Sistema", "Temperatura Zona Crítica"]
+    )
+    st.line_chart(chart_data)
+
+# ------------------------------------------------------------------------------
+# ABA 2: OSs ABERTAS (PENDENTES)
+# ------------------------------------------------------------------------------
+with tab_abertas:
+    st.subheader(f"📌 Chamados Aguardando Atendimento no Setor: {setor_selecionado}")
+
+    os_abertas_setor = [os for os in st.session_state['lista_os'] if os['setor'] == setor_selecionado]
+
+    if os_abertas_setor:
+        cols_os = st.columns(min(len(os_abertas_setor), 4))
+        
+        for idx, item in enumerate(os_abertas_setor):
+            col_target = cols_os[idx % 4]
+            
+            if item['prioridade'] == "Alta":
+                css_class = "os-card-alta"
+                icone = "🔴 ALTA"
+            elif item['prioridade'] == "Média":
+                css_class = "os-card-media"
+                icone = "🟡 MÉDIA"
+            else:
+                css_class = "os-card-baixa"
+                icone = "🟢 BAIXA"
+                
+            # Tratamento de chave seguro contra KeyError
+            hora_exibicao = item.get('hora_abertura', item.get('hora', 'N/A'))
+            
+            with col_target:
+                st.markdown(f"""
+                <div class="{css_class}">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <b>{item['id']} | {item['maquina']}</b>
+                        <small style="float: right;">⏱️ {hora_exibicao}</small>
+                    </div>
+                    <div style="margin-top: 4px; font-size: 0.9em;">
+                        <b>Prioridade:</b> {icone}<br>
+                        <b>Defeito:</b> {item['defeito']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if st.button(f"▶️ Iniciar Atendimento {item['id']}", key=f"btn_iniciar_{item['id']}", use_container_width=True):
+                    os_andamento = item.copy()
+                    os_andamento["hora_inicio"] = datetime.now().strftime('%H:%M:%S')
+                    
+                    st.session_state['em_andamento_os'].insert(0, os_andamento)
+                    st.session_state['lista_os'] = [os for os in st.session_state['lista_os'] if os['id'] != item['id']]
+                    st.toast(f"OS {item['id']} movida para Em Andamento!", icon="⚙️")
+                    st.rerun()
+    else:
+        st.info("✨ Nenhuma Ordem de Serviço aberta aguardando atendimento para este setor.")
+
+# ------------------------------------------------------------------------------
+# ABA 3: OSs EM ANDAMENTO
+# ------------------------------------------------------------------------------
+with tab_andamento:
+    st.subheader(f"⚙️ Manutenções em Execução no Setor: {setor_selecionado}")
+
+    os_andamento_setor = [os for os in st.session_state['em_andamento_os'] if os['setor'] == setor_selecionado]
+
+    if os_andamento_setor:
+        for idx, item_and in enumerate(os_andamento_setor):
+            col_info, col_acao = st.columns([3, 1])
+            
+            hora_ab = item_and.get('hora_abertura', item_and.get('hora', 'N/A'))
+            
+            with col_info:
+                st.write(f"🛠️ **{item_and['id']}** | **Máquina:** {item_and['maquina']} | **Abertura:** {hora_ab} | **Início Atendimento:** {item_and.get('hora_inicio', 'N/A')}")
+                st.caption(f"Sintoma: {item_and['defeito']} (Prioridade: {item_and['prioridade']})")
+                
+            with col_acao:
+                if st.button(f"✅ Concluir {item_and['id']}", key=f"btn_concluir_{item_and['id']}", use_container_width=True):
+                    os_concluida = item_and.copy()
+                    os_concluida["hora_conclusao"] = datetime.now().strftime('%H:%M:%S')
+                    os_concluida["status"] = "Concluída"
+                    
+                    st.session_state['historico_os'].insert(0, os_concluida)
+                    st.session_state['em_andamento_os'] = [os for os in st.session_state['em_andamento_os'] if os['id'] != item_and['id']]
+                    st.toast(f"OS {item_and['id']} concluída com sucesso!", icon="🎉")
+                    st.rerun()
+            st.divider()
+    else:
+        st.info("✨ Nenhuma manutenção em execução no momento para este setor.")
+
+# ------------------------------------------------------------------------------
+# ABA 4: HISTÓRICO DE OSs CONCLUÍDAS
+# ------------------------------------------------------------------------------
+with tab_historico:
+    st.subheader(f"✅ Histórico de OSs Resolvidas no Setor: {setor_selecionado}")
+    
+    historico_setor = [os for os in st.session_state['historico_os'] if os['setor'] == setor_selecionado]
+    
+    if historico_setor:
+        col_h1, col_h2, col_h3 = st.columns(3)
+        col_h1.metric("OSs Encerradas (Este Setor)", len(historico_setor))
+        col_h2.metric("Status PCM", "100% Auditado")
+        col_h3.metric("Última Resolução", historico_setor[0].get('hora_conclusao', 'N/A'))
+        
+        st.markdown("---")
+        
+        for idx, item_hist in enumerate(historico_setor):
+            c_info, c_acao = st.columns([4, 1])
+            
+            hora_ab = item_hist.get('hora_abertura', item_hist.get('hora', 'N/A'))
+            
+            with c_info:
+                st.write(f"✅ **{item_hist['id']}** | **Máquina:** {item_hist['maquina']} | **Abertura:** {hora_ab} | **Conclusão:** {item_hist.get('hora_conclusao', 'N/A')}")
+                st.caption(f"Defeito Resolvido: {item_hist['defeito']} (Prioridade: {item_hist['prioridade']})")
+            
+            with c_acao:
+                if st.button(f"🔄 Reabrir {item_hist['id']}", key=f"btn_reabrir_{item_hist['id']}", use_container_width=True):
+                    os_reaberta = {
+                        "id": item_hist["id"],
+                        "setor": item_hist["setor"],
+                        "maquina": item_hist["maquina"],
+                        "defeito": item_hist["defeito"],
+                        "prioridade": item_hist["prioridade"],
+                        "hora_abertura": datetime.now().strftime('%H:%M:%S')
+                    }
+                    st.session_state['lista_os'].insert(0, os_reaberta)
+                    st.session_state['historico_os'] = [os for os in st.session_state['historico_os'] if os['id'] != item_hist['id']]
+                    st.toast(f"OS {item_hist['id']} reaberta com sucesso!", icon="🔄")
+                    st.rerun()
+            st.divider()
+            
+        df_historico_setor = pd.DataFrame(historico_setor)
+        csv_historico = df_historico_setor.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Baixar Histórico do Setor em CSV",
+            data=csv_historico,
+            file_name=f"historico_injex_{setor_selecionado.split('.')[1].strip()}_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
+    else:
+        st.info(f"Nenhuma Ordem de Serviço foi concluída para o setor **{setor_selecionado}** neste turno.")
