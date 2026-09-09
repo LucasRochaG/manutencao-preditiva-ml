@@ -12,12 +12,12 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inicialização segura da Lista de OSs Abertas
+# Inicialização segura do session_state
 if 'lista_os' not in st.session_state:
     st.session_state['lista_os'] = [
         {
             "id": "OS-1001",
-            "setor": "1. Injeção Plástica",
+            "setor": "Injetora",
             "maquina": "INJ-01",
             "defeito": "Vazamento de óleo no cilindro de injeção",
             "prioridade": "Alta",
@@ -25,7 +25,7 @@ if 'lista_os' not in st.session_state:
         },
         {
             "id": "OS-1002",
-            "setor": "1. Injeção Plástica",
+            "setor": "Injetora",
             "maquina": "INJ-02",
             "defeito": "Ruído anormal no exaustor",
             "prioridade": "Média",
@@ -33,12 +33,11 @@ if 'lista_os' not in st.session_state:
         }
     ]
 
-# Inicialização da Lista de OSs Em Andamento
 if 'em_andamento_os' not in st.session_state:
     st.session_state['em_andamento_os'] = [
         {
             "id": "OS-1003",
-            "setor": "2. Montagem Automática",
+            "setor": "Montagem",
             "maquina": "MONT-01",
             "defeito": "Ajuste na garra pneumática do êmbolo",
             "prioridade": "Baixa",
@@ -47,12 +46,11 @@ if 'em_andamento_os' not in st.session_state:
         }
     ]
 
-# Inicialização do Histórico de OSs Concluídas
 if 'historico_os' not in st.session_state:
     st.session_state['historico_os'] = [
         {
             "id": "OS-0998",
-            "setor": "1. Injeção Plástica",
+            "setor": "Injetora",
             "maquina": "INJ-01",
             "defeito": "Troca de resistência cerâmica Z2",
             "prioridade": "Média",
@@ -92,32 +90,25 @@ st.markdown("""
         border-radius: 6px 6px 0px 0px;
         color: #f0fdf4;
     }
-    
-    .preventiva-card { 
-        background-color: #1e293b; 
-        border-left: 4px solid #3b82f6; 
-        padding: 10px; 
-        margin-bottom: 10px; 
-        border-radius: 4px; 
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# BARRA LATERAL: NAVEGAÇÃO, PREVENTIVA E ABERTURA DE OS
+# BARRA LATERAL: NAVEGAÇÃO E ABERTURA DE OS
 # ==============================================================================
 st.sidebar.image("https://img.icons8.com/color/96/syringe.png", width=70)
 st.sidebar.title("Injex Cirúrgica LTDA")
 st.sidebar.caption("PCM & Inteligência Preditiva")
 
+# NOMES SIMPLIFICADOS
 setor_selecionado = st.sidebar.selectbox(
     "🏢 Selecione o Setor Fabril:",
-    ["1. Injeção Plástica", "2. Montagem Automática", "3. Embalagem & Blister"]
+    ["Injetora", "Montagem", "Embalagem"]
 )
 
-if setor_selecionado == "1. Injeção Plástica":
+if setor_selecionado == "Injetora":
     maquinas = ["INJ-01 (KraussMaffei 200T)", "INJ-02 (Romi Prática 130T)"]
-elif setor_selecionado == "2. Montagem Automática":
+elif setor_selecionado == "Montagem":
     maquinas = ["MONT-01 (Linha Alta Velocidade)", "MONT-02 (Montadora Êmbolo/Corpo)"]
 else:
     maquinas = ["EMB-01 (Termoformadora Blister)", "EMB-02 (Seladora & Encartonadora)"]
@@ -126,56 +117,65 @@ maquina_selecionada = st.sidebar.selectbox("⚙️ Selecione a Máquina:", maqui
 
 st.sidebar.markdown("---")
 
-# SEÇÃO PREVENTIVA (SIDEBAR)
-st.sidebar.subheader("🛠️ Plano de Preventiva")
-
+# DADOS CATEGORIZADOS DE PREVENTIVA POR MAQUINA E POR TIPO
 dados_preventiva = {
     "INJ-01 (KraussMaffei 200T)": {
-        "pecas": ["Anel de Bloqueio", "Jogo Buchas Extratoras"],
-        "tempo": "2h 30min"
+        "tempo": "2h 30min",
+        "pecas_por_tipo": {
+            "🔩 Mecânica & Estrutural": ["Anel de Bloqueio", "Jogo de Buchas Extratoras", "Coluna de Guia"],
+            "💧 Hidráulica": ["Filtro de Óleo Hidráulico", "Reparo do Cilindro de Injeção"],
+            "⚡ Elétrica & Térmica": ["Resistência Ceramica Z1", "Termopar Tipo K"]
+        }
     },
     "INJ-02 (Romi Prática 130T)": {
-        "pecas": ["Resistência Cerâmica Z1", "Filtro Refrigeração"],
-        "tempo": "1h 45min"
+        "tempo": "1h 45min",
+        "pecas_por_tipo": {
+            "🔩 Mecânica & Estrutural": ["Bico de Injeção", "Pino Extrator"],
+            "💧 Hidráulica": ["Filtro de Retorno", "Válvula Proporcional"],
+            "⚡ Elétrica & Térmica": ["Resistência Cerâmica Z1", "Contator Principal"]
+        }
     },
     "MONT-01 (Linha Alta Velocidade)": {
-        "pecas": ["Atuadores Festo", "Garras do Êmbolo"],
-        "tempo": "1h 15min"
+        "tempo": "1h 15min",
+        "pecas_por_tipo": {
+            "💨 Pneumática": ["Atuadores Pneumáticos Festo", "Válvula Solenóide 5/2 vias"],
+            "🔩 Mecânica & Robótica": ["Garras do Êmbolo", "Correia Sincronizadora"],
+            "👁️ Sensores & Automação": ["Sensor Indutivo M12", "Fotorreceptor Óptico"]
+        }
     },
     "MONT-02 (Montadora Êmbolo/Corpo)": {
-        "pecas": ["Atuador Rotativo Servo", "Ventosas Silicone"],
-        "tempo": "2h 00min"
+        "tempo": "2h 00min",
+        "pecas_por_tipo": {
+            "💨 Pneumática": ["Ventosas de Silicone", "Gerador de Vácuo"],
+            "🔩 Mecânica & Robótica": ["Atuador Rotativo Servo", "Mancal Linear"],
+            "⚡ Elétrica": ["Cabo Servo Encoder", "Relé de Segurança"]
+        }
     },
     "EMB-01 (Termoformadora Blister)": {
-        "pecas": ["Matriz Selagem Térmica", "Borracha Hálux"],
-        "tempo": "3h 00min"
+        "tempo": "3h 00min",
+        "pecas_por_tipo": {
+            "🔥 Térmica & Selagem": ["Matriz de Selagem Térmica", "Borracha Hálux de Silicone"],
+            "💨 Pneumática & Vácuo": ["Filtro de Vácuo", "Cilindro Molde"],
+            "🔩 Mecânica": ["Corda de Aquecimento", "Faca de Corte Blister"]
+        }
     },
     "EMB-02 (Seladora & Encartonadora)": {
-        "pecas": ["Correia Dentada Tração", "Cartucho Aquecedor"],
-        "tempo": "1h 30min"
+        "tempo": "1h 30min",
+        "pecas_por_tipo": {
+            "🔥 Térmica & Selagem": ["Cartucho Aquecedor 500W", "Fita de Teflon Protetora"],
+            "🔩 Mecânica & Tracionamento": ["Correia Dentada de Tração", "Rolamentos de Encartonagem"],
+            "⚡ Elétrica": ["Controlador PID de Temperatura"]
+        }
     }
 }
 
 info_prev = dados_preventiva[maquina_selecionada]
 
-st.sidebar.markdown(f"""
-<div class="preventiva-card">
-    <b>Equipamento:</b> {maquina_selecionada.split(' ')[0]}<br>
-    <b>Peças Cadastradas:</b>
-    <ul>
-        {''.join([f'<li>{peca}</li>' for peca in info_prev['pecas']])}
-    </ul>
-    <b>Tempo Estimado:</b> ⏱️ {info_prev['tempo']}
-</div>
-""", unsafe_allow_html=True)
-
-st.sidebar.markdown("---")
-
 # FORMULÁRIO DE ABERTURA RÁPIDA DE OS
 st.sidebar.subheader("📝 Abertura Rápida de OS")
 
 with st.sidebar.form(key="form_os_simplificada", clear_on_submit=True):
-    os_setor = st.selectbox("Setor Destino:", ["1. Injeção Plástica", "2. Montagem Automática", "3. Embalagem & Blister"])
+    os_setor = st.selectbox("Setor Destino:", ["Injetora", "Montagem", "Embalagem"])
     os_maquina = st.text_input("Máquina:", value=maquina_selecionada.split(' ')[0])
     os_defeito = st.text_area("Sintoma / Defeito:", placeholder="Descreva brevemente...")
     os_prioridade = st.selectbox("Prioridade:", ["Alta", "Média", "Baixa"])
@@ -199,24 +199,25 @@ if submit_os:
         st.sidebar.error("Descreva o defeito antes de enviar.")
 
 # ==============================================================================
-# ESTRUTURA DE ABAS NA TELA PRINCIPAL (PRINCIPAL EMPRIMEIRO LUGAR)
+# ESTRUTURA DE ABAS NA TELA PRINCIPAL
 # ==============================================================================
 st.title(f"🏭 Injex Cirúrgica | {maquina_selecionada}")
 
-tab_principal, tab_abertas, tab_andamento, tab_historico = st.tabs([
-    "📊 Visão Geral & Telemetria", 
+tab_principal, tab_preventiva, tab_abertas, tab_andamento, tab_historico = st.tabs([
+    "📊 Visão Geral & Telemetria",
+    "🛠️ Plano de Preventiva",
     "📌 OSs Abertas", 
     "⚙️ Em Andamento", 
     "✅ Histórico / Resolvidas"
 ])
 
 # ------------------------------------------------------------------------------
-# ABA 1: VISÃO GERAL DA MÁQUINA, TELEMETRIA E OEE (MENU PRINCIPAL)
+# ABA 1: VISÃO GERAL DA MÁQUINA
 # ------------------------------------------------------------------------------
 with tab_principal:
     st.subheader("🎛️ Painel de Telemetria CLP em Tempo Real")
     
-    if setor_selecionado == "1. Injeção Plástica":
+    if setor_selecionado == "Injetora":
         col_c1, col_c2, col_c3 = st.columns(3)
         temp_canhao = col_c1.slider("Temp. Canhão (°C)", 180.0, 260.0, 220.0)
         temp_molde = col_c2.slider("Temp. Água Molde (°C)", 15.0, 70.0, 32.0)
@@ -256,21 +257,37 @@ with tab_principal:
             st.error("🔴 **RISCO DE PARADA DE LINHA**")
 
     with col_p2:
-        st.subheader("🔧 Componentes da Preventiva")
-        st.write(f"**Tempo Estimado Parada:** `{info_prev['tempo']}`")
-        for p in info_prev['pecas']:
-            st.write(f"• {p}")
-
-    st.markdown("---")
-    st.subheader("📈 Estabilidade de Processo")
-    chart_data = pd.DataFrame(
-        np.random.normal(loc=100, scale=3, size=(20, 2)),
-        columns=["Pressão Sistema", "Temperatura Zona Crítica"]
-    )
-    st.line_chart(chart_data)
+        st.subheader("📈 Estabilidade de Processo")
+        chart_data = pd.DataFrame(
+            np.random.normal(loc=100, scale=3, size=(20, 2)),
+            columns=["Pressão Sistema", "Temperatura Zona Crítica"]
+        )
+        st.line_chart(chart_data)
 
 # ------------------------------------------------------------------------------
-# ABA 2: OSs ABERTAS (PENDENTES)
+# ABA 2: NOVA ABA DE PLANO DE PREVENTIVA (ORGANIZADA POR TIPO DE PEÇA)
+# ------------------------------------------------------------------------------
+with tab_preventiva:
+    st.subheader(f"🛠️ Plano de Preventiva - Equipamento: {maquina_selecionada}")
+    st.info(f"⏱️ **Tempo Estimado para Manutenção Preventiva:** {info_prev['tempo']}")
+    
+    st.markdown("### 📦 Componentes & Peças de Reposição por Categoria")
+    
+    # Exibição organizada por colunas / tipos de peças
+    categorias = info_prev['pecas_por_tipo']
+    cols_cat = st.columns(len(categorias))
+    
+    for idx, (categoria_nome, lista_pecas) in enumerate(categorias.items()):
+        with cols_cat[idx]:
+            st.markdown(f"#### {categoria_nome}")
+            for peca in lista_pecas:
+                st.write(f"✅ {peca}")
+                
+    st.markdown("---")
+    st.caption("💡 *Nota do PCM:* Verifique a disponibilidade de estoque das peças listadas acima antes de agendar a parada programada.")
+
+# ------------------------------------------------------------------------------
+# ABA 3: OSs ABERTAS
 # ------------------------------------------------------------------------------
 with tab_abertas:
     st.subheader(f"📌 Chamados Aguardando Atendimento no Setor: {setor_selecionado}")
@@ -293,7 +310,6 @@ with tab_abertas:
                 css_class = "os-card-baixa"
                 icone = "🟢 BAIXA"
                 
-            # Tratamento de chave seguro contra KeyError
             hora_exibicao = item.get('hora_abertura', item.get('hora', 'N/A'))
             
             with col_target:
@@ -322,7 +338,7 @@ with tab_abertas:
         st.info("✨ Nenhuma Ordem de Serviço aberta aguardando atendimento para este setor.")
 
 # ------------------------------------------------------------------------------
-# ABA 3: OSs EM ANDAMENTO
+# ABA 4: OSs EM ANDAMENTO
 # ------------------------------------------------------------------------------
 with tab_andamento:
     st.subheader(f"⚙️ Manutenções em Execução no Setor: {setor_selecionado}")
@@ -354,7 +370,7 @@ with tab_andamento:
         st.info("✨ Nenhuma manutenção em execução no momento para este setor.")
 
 # ------------------------------------------------------------------------------
-# ABA 4: HISTÓRICO DE OSs CONCLUÍDAS
+# ABA 5: HISTÓRICO DE OSs CONCLUÍDAS
 # ------------------------------------------------------------------------------
 with tab_historico:
     st.subheader(f"✅ Histórico de OSs Resolvidas no Setor: {setor_selecionado}")
@@ -399,7 +415,7 @@ with tab_historico:
         st.download_button(
             label="📥 Baixar Histórico do Setor em CSV",
             data=csv_historico,
-            file_name=f"historico_injex_{setor_selecionado.split('.')[1].strip()}_{datetime.now().strftime('%Y%m%d')}.csv",
+            file_name=f"historico_injex_{setor_selecionado}_{datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv"
         )
     else:
