@@ -22,12 +22,13 @@ MAQUINAS_POR_SETOR = {
 # ==============================================================================
 # BANCO DE DADOS LOCAL (SESSION STATE)
 # ==============================================================================
+# Perfis possíveis: "Administrador", "Mecânico", "Operador"
 if 'usuarios_db' not in st.session_state:
     st.session_state['usuarios_db'] = {
-        "M001": {"nome": "Carlos Mecânico", "perfil": "Mecânico", "senha": "123"},
-        "M002": {"nome": "Roberto Manutenção", "perfil": "Mecânico", "senha": "123"},
-        "OP101": {"nome": "João Operador", "perfil": "Operador", "senha": "123"},
-        "OP102": {"nome": "Maria Operadora", "perfil": "Operador", "senha": "123"}
+        "ADM01": {"nome": "Carlos Administrador", "perfil": "Administrador", "senha": "123"},
+        "M001": {"nome": "Roberto Mecânico", "perfil": "Mecânico", "senha": "123"},
+        "M002": {"nome": "Marcos Técnico", "perfil": "Mecânico", "senha": "123"},
+        "OP101": {"nome": "João Operador", "perfil": "Operador", "senha": "123"}
     }
 
 if 'autenticado' not in st.session_state:
@@ -38,18 +39,17 @@ if 'usuario_logado' not in st.session_state:
 if 'lista_os' not in st.session_state:
     st.session_state['lista_os'] = [
         {"id": "OS-1001", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Vazamento de óleo no cilindro", "prioridade": "Alta", "hora_abertura": "08:15", "autor_abertura": "João Operador"},
-        {"id": "OS-1002", "setor": "Injetora Plástica", "maquina": "INJ-05 (Injetora 5)", "defeito": "Ruído no exaustor", "prioridade": "Média", "hora_abertura": "09:30", "autor_abertura": "Maria Operadora"},
-        {"id": "OS-1004", "setor": "Embalagem & Selagem", "maquina": "EMB-04 (Embalagem 4)", "defeito": "Falha na resistência de selagem", "prioridade": "Alta", "hora_abertura": "10:11", "autor_abertura": "João Operador"}
+        {"id": "OS-1002", "setor": "Injetora Plástica", "maquina": "INJ-05 (Injetora 5)", "defeito": "Ruído no exaustor", "prioridade": "Média", "hora_abertura": "09:30", "autor_abertura": "João Operador"}
     ]
 
 if 'em_andamento_os' not in st.session_state:
     st.session_state['em_andamento_os'] = [
-        {"id": "OS-1003", "setor": "Linha de Montagem", "maquina": "MONT-02 (Montagem 2)", "defeito": "Ajuste na garra pneumática", "prioridade": "Baixa", "hora_abertura": "10:05", "hora_inicio": "10:20", "mecanico_responsavel": "Carlos Mecânico"}
+        {"id": "OS-1003", "setor": "Linha de Montagem", "maquina": "MONT-02 (Montagem 2)", "defeito": "Ajuste na garra pneumática", "prioridade": "Baixa", "hora_abertura": "10:05", "hora_inicio": "10:20", "mecanico_responsavel": "Roberto Mecânico"}
     ]
 
 if 'historico_os' not in st.session_state:
     st.session_state['historico_os'] = [
-        {"id": "OS-0998", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Troca de resistência Z2", "prioridade": "Média", "hora_abertura": "06:20", "hora_inicio": "06:25", "hora_conclusao": "07:10", "status": "Concluída", "mecanico_responsavel": "Carlos Mecânico"}
+        {"id": "OS-0998", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Troca de resistência Z2", "prioridade": "Média", "hora_abertura": "06:20", "hora_inicio": "06:25", "hora_conclusao": "07:10", "status": "Concluída", "mecanico_responsavel": "Roberto Mecânico", "relatorio_fechamento": "Substituído o cartucho de resistência queimado e testado o circuito."}
     ]
 
 # Estilo CSS Personalizado
@@ -67,20 +67,21 @@ st.markdown("""
         align-items: center;
         font-size: 0.75rem;
     }
-    .badge-op { background-color: #3b82f6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+    .badge-adm { background-color: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
     .badge-mec { background-color: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+    .badge-op  { background-color: #3b82f6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# BARRA LATERAL: LOGO, LOGIN PEQUENO NO CANTO E NAVEGAÇÃO
+# BARRA LATERAL: LOGIN DISCRETO & NAVEGAÇÃO
 # ==============================================================================
 st.sidebar.caption("🤖 PROJETO INDUSTRIAL (MOBILE PWA)")
 st.sidebar.markdown("### 🦾 MANTIS 4.0")
 st.sidebar.caption("Maintenance & Machine Intelligence System")
 st.sidebar.markdown("---")
 
-# MÓDULO DE LOGIN DISCRETO NA BARRA LATERAL
+# Módulo de Login Discreto
 if not st.session_state['autenticado']:
     with st.sidebar.expander("🔐 Identificação / Login"):
         mat_input = st.text_input("Matrícula:", key="mat_discreto")
@@ -103,7 +104,13 @@ if not st.session_state['autenticado']:
                 st.error("Matrícula não encontrada.")
 else:
     usuario = st.session_state['usuario_logado']
-    badge_classe = "badge-mec" if usuario['perfil'] == "Mecânico" else "badge-op"
+    if usuario['perfil'] == "Administrador":
+        badge_classe = "badge-adm"
+    elif usuario['perfil'] == "Mecânico":
+        badge_classe = "badge-mec"
+    else:
+        badge_classe = "badge-op"
+
     st.sidebar.markdown(f"👤 **{usuario['nome']}**")
     st.sidebar.markdown(f"Perfil: <span class='{badge_classe}'>{usuario['perfil']}</span>", unsafe_allow_html=True)
     if st.sidebar.button("🚪 Sair", use_container_width=True):
@@ -113,23 +120,20 @@ else:
 
 st.sidebar.markdown("---")
 
-# NAVEGAÇÃO EM FORMA DE BOTÃO (PAINEL / FÁBRICA)
-if 'pagina_ativa' not in st.session_state:
-    st.session_state['pagina_ativa'] = "Painel"
+# NAVEGAÇÃO ENTRE TELAS (Painel, Fábrica e Gestão de Usuários se for ADM)
+paineis_disponiveis = ["🖥️ Painel", "🌐 Fábrica"]
+if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] == "Administrador":
+    paineis_disponiveis.append("👥 Cadastros (ADM)")
 
-col_btn1, col_btn2 = st.sidebar.columns(2)
-if col_btn1.button("🖥️ Painel", use_container_width=True, type="primary" if st.session_state['pagina_ativa'] == "Painel" else "secondary"):
-    st.session_state['pagina_ativa'] = "Painel"
-    st.rerun()
+if 'aba_selecionada' not in st.session_state:
+    st.session_state['aba_selecionada'] = "🖥️ Painel"
 
-if col_btn2.button("🌐 Fábrica", use_container_width=True, type="primary" if st.session_state['pagina_ativa'] == "Fábrica" else "secondary"):
-    st.session_state['pagina_ativa'] = "Fábrica"
-    st.rerun()
+st.session_state['aba_selecionada'] = st.sidebar.radio("Navegação:", paineis_disponiveis, index=paineis_disponiveis.index(st.session_state['aba_selecionada']) if st.session_state['aba_selecionada'] in paineis_disponiveis else 0)
 
 st.sidebar.markdown("---")
 
 # SELEÇÃO DE MÁQUINA (NO PAINEL)
-if st.session_state['pagina_ativa'] == "Painel":
+if st.session_state['aba_selecionada'] == "🖥️ Painel":
     setor_selecionado = st.sidebar.selectbox("Setor:", ["Injetora Plástica", "Linha de Montagem", "Embalagem & Selagem"])
     maquinas_disponiveis = MAQUINAS_POR_SETOR[setor_selecionado]
     maquina_selecionada = st.sidebar.selectbox("Máquina:", maquinas_disponiveis)
@@ -182,9 +186,61 @@ def get_preventiva_dados(maquina_nome):
 info_prev = get_preventiva_dados(maquina_selecionada)
 
 # ==============================================================================
-# PÁGINA: FÁBRICA (VISÃO GERAL)
+# TELA 1: GESTÃO DE CADASTROS (EXCLUSIVO PARA ADMINISTRADOR)
 # ==============================================================================
-if st.session_state['pagina_ativa'] == "Fábrica":
+if st.session_state['aba_selecionada'] == "👥 Cadastros (ADM)":
+    st.markdown("### 👥 Painel Administrativo — Gestão de Funcionários")
+    st.caption("Cadastre, remova ou edite os acessos do sistema (Operadores, Mecânicos e Administradores).")
+    
+    col_cad1, col_cad2 = st.columns(2)
+    
+    with col_cad1:
+        st.markdown("##### ➕ Novo Cadastro")
+        with st.form("form_adm_novo_usuario"):
+            mat_novo = st.text_input("Matrícula (Ex: M005, ADM02, OP105):")
+            nome_novo = st.text_input("Nome Completo:")
+            perfil_novo = st.selectbox("Perfil de Acesso:", ["Mecânico", "Administrador", "Operador"])
+            senha_nova = st.text_input("Senha de Acesso:", type="password")
+            btn_salvar_adm = st.form_submit_button("Cadastrar Funcionário", use_container_width=True)
+            
+            if btn_salvar_adm:
+                if mat_novo.strip() and nome_novo.strip() and senha_nova.strip():
+                    if mat_novo.strip() in st.session_state['usuarios_db']:
+                        st.error("Esta matrícula já está cadastrada!")
+                    else:
+                        st.session_state['usuarios_db'][mat_novo.strip()] = {
+                            "nome": nome_novo.strip(),
+                            "perfil": perfil_novo,
+                            "senha": senha_nova.strip()
+                        }
+                        st.success(f"Funcionário {nome_novo} cadastrado com sucesso!")
+                        st.rerun()
+                else:
+                    st.warning("Preencha todos os campos obrigatórios.")
+                    
+    with col_cad2:
+        st.markdown("##### 📋 Usuários Atualmente Cadastrados")
+        df_usuarios = pd.DataFrame([
+            {"Matrícula": k, "Nome": v["nome"], "Perfil": v["perfil"]} 
+            for k, v in st.session_state['usuarios_db'].items()
+        ])
+        st.dataframe(df_usuarios, use_container_width=True, hide_index=True)
+        
+        # Opção de exclusão
+        mat_para_remover = st.selectbox("Selecionar Matrícula para Remover:", [""] + list(st.session_state['usuarios_db'].keys()))
+        if st.button("🗑️ Remover Usuário Selecionado", use_container_width=True):
+            if mat_para_remover:
+                if mat_para_remover == st.session_state['usuario_logado'].get('matricula'):
+                    st.error("Você não pode remover seu próprio usuário ativo!")
+                else:
+                    del st.session_state['usuarios_db'][mat_para_remover]
+                    st.success("Usuário removido com sucesso!")
+                    st.rerun()
+
+# ==============================================================================
+# TELA 2: FÁBRICA (VISÃO GERAL)
+# ==============================================================================
+elif st.session_state['aba_selecionada'] == "🌐 Fábrica":
     st.markdown("### 🌐 Visão Geral Fábrica — MANTIS 4.0")
     
     df_os_todas = pd.DataFrame(st.session_state['lista_os'] + st.session_state['em_andamento_os'] + st.session_state['historico_os'])
@@ -216,7 +272,7 @@ if st.session_state['pagina_ativa'] == "Fábrica":
                     st.caption(f"⚠️ {item['defeito']} | Por: {item.get('autor_abertura','N/D')}")
                     
                     if st.button(f"▶️ Iniciar {item['id']}", key=f"f_in_{setor_nome}_{item['id']}", use_container_width=True):
-                        if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] == "Mecânico":
+                        if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] in ["Mecânico", "Administrador"]:
                             os_and = item.copy()
                             os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
                             os_and["mecanico_responsavel"] = st.session_state['usuario_logado']['nome']
@@ -224,12 +280,12 @@ if st.session_state['pagina_ativa'] == "Fábrica":
                             st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
                             st.rerun()
                         else:
-                            st.warning("⚠️ Faça login com uma conta de **Mecânico** na barra lateral para iniciar!")
+                            st.warning("⚠️ Apenas **Mecânicos ou Administradores** podem iniciar OSs!")
                     st.divider()
             else:
                 st.caption("Nenhuma ordem aberta.")
 
-        # OS EM ANDAMENTO
+        # OS EM ANDAMENTO (COM RELATÓRIO DE FECHAMENTO)
         with col_and:
             os_and = [o for o in st.session_state['em_andamento_os'] if o['setor'] == setor_nome]
             st.markdown(f"##### ⚙️ Em Atendimento ({len(os_and)})")
@@ -238,31 +294,38 @@ if st.session_state['pagina_ativa'] == "Fábrica":
                     st.markdown(f"**{item['id']}** | {item['maquina']}")
                     st.caption(f"🛠️ {item['defeito']} | Resp: {item.get('mecanico_responsavel','Técnico')}")
                     
+                    # Campo de relatório obrigatório para fechamento
+                    relatorio_text = st.text_area(f"Relatório Técnico ({item['id']}):", placeholder="O que foi feito para corrigir?", key=f"rel_{setor_nome}_{item['id']}", height=70)
+                    
                     if st.button(f"✅ Finalizar {item['id']}", key=f"f_fin_{setor_nome}_{item['id']}", use_container_width=True):
-                        if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] == "Mecânico":
-                            os_conc = item.copy()
-                            os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
-                            os_conc["status"] = "Concluída"
-                            st.session_state['historico_os'].insert(0, os_conc)
-                            st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
-                            st.rerun()
+                        if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] in ["Mecânico", "Administrador"]:
+                            if relatorio_text.strip() == "":
+                                st.error("⚠️ Preencha o relatório técnico de fechamento antes de concluir a OS!")
+                            else:
+                                os_conc = item.copy()
+                                os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
+                                os_conc["status"] = "Concluída"
+                                os_conc["relatorio_fechamento"] = relatorio_text
+                                st.session_state['historico_os'].insert(0, os_conc)
+                                st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
+                                st.rerun()
                         else:
-                            st.warning("⚠️ Faça login com uma conta de **Mecânico** na barra lateral para fechar OSs!")
+                            st.warning("⚠️ Apenas **Mecânicos ou Administradores** podem fechar OSs!")
                     st.divider()
             else:
                 st.caption("Nenhum atendimento.")
 
-        # OS RESOLVIDAS
+        # OS RESOLVIDAS (MOSTRANDO QUEM FECHOU E O RELATÓRIO)
         with col_res:
             os_res = [o for o in st.session_state['historico_os'] if o['setor'] == setor_nome]
             st.markdown(f"##### ✅ Concluídas ({len(os_res)})")
             if os_res:
                 for item in os_res:
                     st.markdown(f"**{item['id']}** | {item['maquina']}")
-                    st.caption(f"✔️ {item['defeito']} | Mecânico: {item.get('mecanico_responsavel','')}")
+                    st.caption(f"✔️ {item['defeito']}\n\n🛠️ **Mecânico Responsável:** {item.get('mecanico_responsavel','')}\n📝 **Relatório:** {item.get('relatorio_fechamento','Sem relatório')}")
                     
                     if st.button(f"🔄 Reabrir {item['id']}", key=f"f_re_{setor_nome}_{item['id']}", use_container_width=True):
-                        if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] == "Mecânico":
+                        if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] in ["Mecânico", "Administrador"]:
                             os_reab = {
                                 "id": item["id"], "setor": item["setor"], "maquina": item["maquina"],
                                 "defeito": item["defeito"], "prioridade": item["prioridade"],
@@ -273,7 +336,7 @@ if st.session_state['pagina_ativa'] == "Fábrica":
                             st.session_state['historico_os'] = [o for o in st.session_state['historico_os'] if o['id'] != item['id']]
                             st.rerun()
                         else:
-                            st.warning("⚠️ Apenas **Mecânicos** logados podem reabrir.")
+                            st.warning("⚠️ Apenas **Mecânicos ou Administradores** podem reabrir.")
                     st.divider()
             else:
                 st.caption("Sem histórico recente.")
@@ -286,7 +349,7 @@ if st.session_state['pagina_ativa'] == "Fábrica":
         render_tabela_setor("Embalagem & Selagem")
 
 # ==============================================================================
-# PÁGINA: PAINEL DA MÁQUINA INDIVIDUAL
+# TELA 3: PAINEL DA MÁQUINA INDIVIDUAL
 # ==============================================================================
 else:
     st.markdown(f"### 🏢 Setor: **{setor_selecionado}** | ⚙️ **{maquina_selecionada}**")
@@ -364,7 +427,7 @@ else:
                 st.write(f"📌 **{item['id']}** - **Problema:** {item['defeito']} | **Por:** {item.get('autor_abertura','N/D')}")
                 
                 if st.button(f"▶️ Iniciar Atendimento {item['id']}", key=f"p_in_{item['id']}"):
-                    if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] == "Mecânico":
+                    if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] in ["Mecânico", "Administrador"]:
                         os_and = item.copy()
                         os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
                         os_and["mecanico_responsavel"] = st.session_state['usuario_logado']['nome']
@@ -372,7 +435,7 @@ else:
                         st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
                         st.rerun()
                     else:
-                        st.warning("⚠️ Restrito: Apenas **Mecânicos** logados podem iniciar.")
+                        st.warning("⚠️ Restrito: Apenas **Mecânicos ou Administradores** podem iniciar.")
                 st.divider()
         else:
             st.success(f"Nenhuma ordem aberta para a **{maquina_selecionada}**.")
@@ -383,16 +446,22 @@ else:
             for item in os_and_maquina:
                 st.write(f"🛠️ **{item['id']}** - **Problema:** {item['defeito']} | **Técnico:** {item.get('mecanico_responsavel','')}")
                 
+                relatorio_text_p = st.text_area(f"Relatório Técnico ({item['id']}):", placeholder="O que foi feito?", key=f"p_rel_{item['id']}", height=70)
+                
                 if st.button(f"✅ Finalizar OS {item['id']}", key=f"p_fin_{item['id']}"):
-                    if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] == "Mecânico":
-                        os_conc = item.copy()
-                        os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
-                        os_conc["status"] = "Concluída"
-                        st.session_state['historico_os'].insert(0, os_conc)
-                        st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
-                        st.rerun()
+                    if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] in ["Mecânico", "Administrador"]:
+                        if relatorio_text_p.strip() == "":
+                            st.error("⚠️ Preencha o relatório técnico de fechamento!")
+                        else:
+                            os_conc = item.copy()
+                            os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
+                            os_conc["status"] = "Concluída"
+                            os_conc["relatorio_fechamento"] = relatorio_text_p
+                            st.session_state['historico_os'].insert(0, os_conc)
+                            st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
+                            st.rerun()
                     else:
-                        st.warning("⚠️ Restrito: Apenas **Mecânicos** logados podem concluir.")
+                        st.warning("⚠️ Restrito: Apenas **Mecânicos ou Administradores** podem concluir.")
                 st.divider()
         else:
             st.info(f"Nenhuma manutenção em andamento na **{maquina_selecionada}**.")
@@ -401,7 +470,7 @@ else:
         os_res_maquina = [o for o in st.session_state['historico_os'] if o['maquina'] == maquina_selecionada]
         if os_res_maquina:
             for item in os_res_maquina:
-                st.write(f"✅ **{item['id']}** - **Solucionado:** {item['defeito']} | **Técnico:** {item.get('mecanico_responsavel','')} | **Conclusão:** {item.get('hora_conclusao','')}")
+                st.write(f"✅ **{item['id']}** - **Solucionado:** {item['defeito']}\n\n🛠️ **Mecânico:** {item.get('mecanico_responsavel','')}\n📝 **Relatório:** {item.get('relatorio_fechamento','Sem relatório')}")
                 st.divider()
         else:
             st.caption(f"Nenhum histórico recente para a **{maquina_selecionada}**.")
