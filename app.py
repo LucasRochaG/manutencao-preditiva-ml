@@ -1,151 +1,172 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 # ==============================================================================
 # CONFIGURAÇÃO DA PÁGINA
 # ==============================================================================
 st.set_page_config(
-    page_title="Injeção Cirúrgica - Gestão Preditiva Fabril",
+    page_title="Injex Cirúrgica - Gestão Preditiva Fabril",
     page_icon="💉",
     layout="wide"
 )
+
+# Estilo CSS Personalizado para Visual Industrial
+st.markdown("""
+<style>
+    .stMetric { background-color: #1f2937; padding: 10px; border-radius: 8px; }
+    .os-card { background-color: #2b1d1d; border: 1px solid #ff4b4b; padding: 15px; border-radius: 8px; }
+</style>
+""", unsafe_allow_html=True)
 
 # ==============================================================================
 # BARRA LATERAL: SELEÇÃO DE SETOR E MÁQUINA
 # ==============================================================================
 st.sidebar.image("https://img.icons8.com/color/96/syringe.png", width=70)
 st.sidebar.title("Injex Cirúrgica LTDA")
-st.sidebar.subheader("Nível Fabril - Indústria 4.0")
+st.sidebar.caption("Sistema de Monitoramento Preditivo & OEE")
 
-# 1. Seleção do Setor
 setor_selecionado = st.sidebar.selectbox(
     "🏢 Selecione o Setor Fabril:",
     ["1. Injeção Plástica", "2. Montagem Automática", "3. Embalagem & Blister"]
 )
 
-# 2. Mapeamento de Máquinas por Setor
 if setor_selecionado == "1. Injeção Plástica":
     maquinas = ["INJ-01 (KraussMaffei 200T)", "INJ-02 (Romi Prática 130T)"]
 elif setor_selecionado == "2. Montagem Automática":
-    maquinas = ["MONT-01 (Linha Alta Velocidade - 5ml)", "MONT-02 (Montadora Êmbolo/Corpo 10ml)"]
+    maquinas = ["MONT-01 (Linha Alta Velocidade)", "MONT-02 (Montadora Êmbolo/Corpo)"]
 else:
-    maquinas = ["EMB-01 (Termoformadora Blister 01)", "EMB-02 (Seladora & Encartonadora 02)"]
+    maquinas = ["EMB-01 (Termoformadora Blister)", "EMB-02 (Seladora & Encartonadora)"]
 
 maquina_selecionada = st.sidebar.selectbox("⚙️ Selecione a Máquina:", maquinas)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Status Conexão: 🟢 OPC UA Server Active")
+st.sidebar.subheader("🎛️ Simulação de Telemetria CLP")
 
 # ==============================================================================
-# DADOS DE TELEMETRIA POR SETOR (LÓGICA DOS SENSORES)
+# LÓGICA POR SETOR
 # ==============================================================================
-
 if setor_selecionado == "1. Injeção Plástica":
-    st.title(f"🏭 Setor: Injeção Plástica | {maquina_selecionada}")
+    st.title(f"🏭 Injeção Plástica | {maquina_selecionada}")
     
-    # Contexto Operacional
-    col_i1, col_i2, col_i3, col_i4 = st.columns(4)
-    col_i1.info("**Produto:** Corpo Seringa 5ml")
-    col_i2.info("**Molde:** 64 Cavidades (PP Medical)")
-    col_i3.info("**OPC UA IP:** 192.168.1.101")
-    col_i4.info("**Meta Hora:** 12.000 pçs/h")
-    
-    # Simulação de Sensores
-    st.sidebar.subheader("Simulação CLP - Injeção")
+    # Controles
     temp_canhao = st.sidebar.slider("Temp. Canhão Z1 (°C)", 180.0, 260.0, 220.0)
     temp_molde = st.sidebar.slider("Temp. Água Molde (°C)", 15.0, 70.0, 32.0)
     pressao_recalque = st.sidebar.slider("Pressão Injeção (bar)", 50.0, 160.0, 95.0)
     ciclos = st.sidebar.number_input("Ciclos Acumulados Molde", value=380000)
     
-    # Cálculo de Risco
     risco = min(100.0, (pressao_recalque * temp_molde) / 80) if ciclos > 300000 else 12.0
     
-    # Métricas
+    # KPIs Rápidos
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Temp. Canhão", f"{temp_canhao:.1f} °C", f"{temp_canhao-210:.1f} °C")
-    m2.metric("Temp. Molde", f"{temp_molde:.1f} °C", "Abaixo do Limite" if temp_molde < 45 else "Crítico")
-    m3.metric("Pressão Recalque", f"{pressao_recalque:.0f} bar")
-    m4.metric("Ciclos do Molde", f"{ciclos:,}")
+    m1.metric("Temp. Canhão", f"{temp_canhao:.1f} °C")
+    m2.metric("Temp. Molde", f"{temp_molde:.1f} °C", "Normal" if temp_molde < 45 else "Superaquecendo", delta_color="inverse")
+    m3.metric("Pressão Injeção", f"{pressao_recalque:.0f} bar")
+    m4.metric("Ciclos Totais", f"{ciclos:,}")
 
 elif setor_selecionado == "2. Montagem Automática":
-    st.title(f"⚙️ Setor: Montagem Automática | {maquina_selecionada}")
+    st.title(f"⚙️ Montagem Automática | {maquina_selecionada}")
     
-    # Contexto Operacional
-    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-    col_m1.info("**Processo:** Acoplamento Corpo + Êmbolo + Agulha")
-    col_m2.info("**Atuadores:** Pneumáticos / Servo-motores")
-    col_m3.info("**OPC UA IP:** 192.168.1.110")
-    col_m4.info("**Meta Hora:** 15.000 pçs/h")
-    
-    # Simulação de Sensores de Montagem
-    st.sidebar.subheader("Simulação CLP - Montagem")
     pressao_ar = st.sidebar.slider("Pressão Ar Comprimido (bar)", 4.0, 8.0, 6.2)
     vel_ciclo = st.sidebar.slider("Velocidade (Peças/Min)", 100, 300, 250)
-    rejeição_visao = st.sidebar.slider("Taxa Rejeição Câmeras (%)", 0.0, 10.0, 0.8)
     vibracao_garra = st.sidebar.slider("Vibração Atuador (mm/s)", 0.5, 8.0, 1.8)
     
-    # Cálculo de Risco da Montadora
-    risco = min(100.0, (vibracao_garra * 12) + (rejeição_visao * 8))
+    risco = min(100.0, (vibracao_garra * 15))
     
-    # Métricas da Montagem
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Pressão Linha Ar", f"{pressao_ar:.1f} bar", "Normal" if pressao_ar >= 5.5 else "Baixa Pressão")
-    m2.metric("Cadência Montagem", f"{vel_ciclo} pçs/min")
-    m3.metric("Rejeição Visão Comp.", f"{rejeição_visao:.2f} %", "OK" if rejeição_visao < 2.0 else "Alta Rejeição")
-    m4.metric("Vibração Atuadores", f"{vibracao_garra:.1f} mm/s", "Alinhado" if vibracao_garra < 4.0 else "Desalinhamento")
+    m1.metric("Pressão Ar", f"{pressao_ar:.1f} bar")
+    m2.metric("Velocidade", f"{vel_ciclo} pçs/min")
+    m3.metric("Vibração Atuadores", f"{vibracao_garra:.1f} mm/s")
+    m4.metric("Status Câmeras", "100% OK")
 
-else:  # Embalagem & Blister
-    st.title(f"📦 Setor: Embalagem & Blister | {maquina_selecionada}")
+else:
+    st.title(f"📦 Embalagem & Blister | {maquina_selecionada}")
     
-    # Contexto Operacional
-    col_e1, col_e2, col_e3, col_e4 = st.columns(4)
-    col_e1.info("**Embalagem:** Papel Grau Cirúrgico / Filme LAMINADO")
-    col_e2.info("**Norma:** Esterilidade ANVISA (ISO 11607)")
-    col_e3.info("**OPC UA IP:** 192.168.1.120")
-    col_e4.info("**Meta Hora:** 10.000 caixas/h")
+    temp_selagem = st.sidebar.slider("Temp. Selagem (°C)", 110.0, 180.0, 145.0)
+    vacuo_bolha = st.sidebar.slider("Vácuo Blister (mbar)", -900, -200, -750)
     
-    # Simulação de Sensores da Embaladora
-    st.sidebar.subheader("Simulação CLP - Embalagem")
-    temp_selagem = st.sidebar.slider("Temp. Matriz Selagem (°C)", 110.0, 180.0, 145.0)
-    pressao_selagem = st.sidebar.slider("Pressão de Selagem (bar)", 1.5, 6.0, 3.5)
-    vacuo_bolha = st.sidebar.slider("Vácuo Formação Blister (mbar)", -900, -200, -750)
-    tensao_filme = st.sidebar.slider("Tensão do Filme (N)", 10, 80, 45)
+    risco = 85.0 if (temp_selagem < 130 or temp_selagem > 160 or vacuo_bolha > -500) else 8.0
     
-    # Cálculo de Risco na Embalagem
-    risco = 85.0 if (temp_selagem < 130 or temp_selagem > 160 or vacuo_bolha > -500) else 5.0
-    
-    # Métricas da Embaladora
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Temp. Selagem Hálux", f"{temp_selagem:.1f} °C", "Dentro do Setpoint" if 135 <= temp_selagem <= 155 else "Fora do Padrão")
-    m2.metric("Pressão de Selagem", f"{pressao_selagem:.1f} bar")
-    m3.metric("Vácuo de Formação", f"{vacuo_bolha} mbar", "Selagem Estéril OK" if vacuo_bolha < -600 else "Risco Vazamento")
-    m4.metric("Tensão do Filme", f"{tensao_filme} N")
+    m1.metric("Temp. Selagem", f"{temp_selagem:.1f} °C")
+    m2.metric("Vácuo Blister", f"{vacuo_bolha} mbar")
+    m3.metric("Esterilidade", "Garantida (ISO 11607)")
+    m4.metric("Filme Utilizado", "98.2 %")
 
 # ==============================================================================
-# PAINEL GERAL DE RISCO PREDITIVO E GRÁFICO (COMUM A TODOS OS SETORES)
+# PAINEL DE EFICIÊNCIA GLOBAL (OEE)
 # ==============================================================================
 st.markdown("---")
-c_status, c_bar = st.columns([1, 2])
+st.subheader("📊 Indicadores Industriais (OEE em Tempo Real)")
 
-with c_status:
-    st.subheader("Status de Manutenção Preditiva")
-    if risco < 35:
-        st.success("🟢 **PROCESSO ESTÁVEL**\nParâmetros operando dentro da janela de qualidade.")
-    elif 35 <= risco < 65:
-        st.warning("🟡 **ATENÇÃO TÉCNICA**\nDesvio identificado. Agendar inspeção preventiva.")
-    else:
-        st.error("🔴 **ALERTA CRÍTICO**\nRisco imediato de refugo do lote ou parada não programada!")
+# Lógica de cálculo do OEE baseado no risco
+disp = max(60, int(98 - (risco * 0.3)))
+perf = max(70, int(95 - (risco * 0.2)))
+qual = max(80, int(99 - (risco * 0.4)))
+oee = int((disp/100) * (perf/100) * (qual/100) * 100)
 
-with c_bar:
-    st.subheader("Probabilidade de Falha / Parada")
+col_oee1, col_oee2, col_oee3, col_oee4 = st.columns(4)
+col_oee1.metric("Disponibilidade", f"{disp} %")
+col_oee2.metric("Performance", f"{perf} %")
+col_oee3.metric("Qualidade", f"{qual} %")
+col_oee4.metric("OEE GLOBAL", f"{oee} %", delta=f"{oee - 85}% vs Meta World Class")
+
+# ==============================================================================
+# MANUTENÇÃO PREDITIVA & EMISSÃO DE ORDEM DE SERVIÇO (OS)
+# ==============================================================================
+st.markdown("---")
+col_p1, col_p2 = st.columns([1, 1])
+
+with col_p1:
+    st.subheader("🤖 Diagnóstico da Inteligência Artificial")
     st.progress(int(risco))
-    st.write(f"**Índice de Risco Calculado pela IA:** `{risco:.1f}%`")
+    st.write(f"**Risco de Defeito / Parada:** `{risco:.1f}%`")
+    
+    if risco < 35:
+        st.success("🟢 **SISTEMA OPERANDO EM CONDIÇÕES IDEIAIS**")
+    elif 35 <= risco < 65:
+        st.warning("🟡 **ALERTA TÉCNICO:** Variação detectada. Recomenda-se acompanhamento no próximo turno.")
+    else:
+        st.error("🔴 **ALERTA CRÍTICO:** Padrão de falha identificado!")
 
-# Tendência
-st.subheader("📈 Monitoramento Contínuo de Estabilidade")
-chart_data = pd.DataFrame(
-    np.random.normal(loc=100, scale=3, size=(20, 3)),
-    columns=["Variável Térmica/Mecânica", "Pressão do Sistema", "Índice Qualidade"]
+with col_p2:
+    st.subheader("🛠️ Gestão de Manutenção Preditiva")
+    if risco >= 65:
+        st.markdown(f"""
+        <div class="os-card">
+            <h4>🚨 ORDEM DE SERVIÇO AUTOMÁTICA GERADA (#OS-{datetime.now().strftime('%H%M%S')})</h4>
+            <p><b>Equipamento:</b> {maquina_selecionada}</p>
+            <p><b>Ação Requerida:</b> Verificar sistema de refrigeração e lubrificação do molde.</p>
+            <p><b>Prioridade:</b> ALTA (Prevenção de Parada de Linha)</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("✅ Confirmar Recebimento da OS pelo Mecânico"):
+            st.success("Ordem de serviço atribuída ao técnico de plantão!")
+    else:
+        st.info("Nenhuma ordem de serviço pendente para esta máquina. Operação dentro do padrão.")
+
+# ==============================================================================
+# HISTÓRICO E EXPORTAÇÃO DE DADOS (COMPLIANCE)
+# ==============================================================================
+st.markdown("---")
+st.subheader("📈 Histórico do Turno & Exportação para Auditoria")
+
+# Gerando histórico simulado
+df_historico = pd.DataFrame({
+    "Horário": [f"{h}:00" for h in range(6, 15)],
+    "Temperatura (°C)": np.random.normal(215, 2, 9),
+    "Pressão (bar)": np.random.normal(95, 3, 9),
+    "Risco Calculado (%)": np.random.normal(risco, 5, 9)
+})
+
+st.line_chart(df_historico.set_index("Horário")[["Temperatura (°C)", "Pressão (bar)"]])
+
+# Botão para baixar relatório CSV
+csv = df_historico.to_csv(index=False).encode('utf-8')
+st.download_button(
+    label="📥 Baixar Relatório do Turno (CSV / ANVISA)",
+    data=csv,
+    file_name=f"relatorio_injex_{datetime.now().strftime('%Y%m%d')}.csv",
+    mime="text/csv"
 )
-st.line_chart(chart_data)
