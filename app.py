@@ -164,10 +164,11 @@ st.sidebar.markdown(f"""
 
 st.sidebar.markdown("---")
 
-# FORMULÁRIO DE ABERTURA RÁPIDA DE OS (SIDEBAR)
+# FORMULÁRIO DE ABERTURA RÁPIDA DE OS (SIDEBAR - COM LIMPEZA AUTOMÁTICA)
 st.sidebar.subheader("📝 Abertura Rápida de OS")
 
-with st.sidebar.form(key="form_os_simplificada"):
+# Usando st.sidebar.form com clear_on_submit=True para limpar os campos após enviar
+with st.sidebar.form(key="form_os_simplificada", clear_on_submit=True):
     os_setor = st.selectbox("Setor Destino:", ["1. Injeção Plástica", "2. Montagem Automática", "3. Embalagem & Blister"])
     os_maquina = st.text_input("Máquina:", value=maquina_selecionada.split(' ')[0])
     os_defeito = st.text_area("Sintoma / Defeito:", placeholder="Descreva brevemente...")
@@ -225,7 +226,7 @@ with tab_painel:
             with col_target:
                 st.markdown(f"""
                 <div class="{css_class}">
-                    <div style="display:flex; justify-between; align-items:center;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
                         <b>{item['id']} | {item['maquina']}</b>
                         <small style="float: right;">⏱️ {item['hora']}</small>
                     </div>
@@ -238,15 +239,12 @@ with tab_painel:
                 
                 # Ação de Dar Baixa e Mover para o Histórico
                 if st.button(f"✅ Concluir {item['id']}", key=f"btn_baixa_{item['id']}", use_container_width=True):
-                    # Registra hora de conclusão e salva no histórico
                     os_resolvida = item.copy()
                     os_resolvida["hora_abertura"] = item["hora"]
                     os_resolvida["hora_conclusao"] = datetime.now().strftime('%H:%M:%S')
                     os_resolvida["status"] = "Concluída"
                     
                     st.session_state['historico_os'].insert(0, os_resolvida)
-                    
-                    # Remove das abertas
                     st.session_state['lista_os'] = [os for os in st.session_state['lista_os'] if os['id'] != item['id']]
                     st.toast(f"OS {item['id']} encerrada e movida para o histórico!", icon="🎉")
                     st.rerun()
@@ -303,44 +301,57 @@ with tab_painel:
             st.write(f"• {p}")
 
 # ------------------------------------------------------------------------------
-# ABA 2: HISTÓRICO DE OSs CONCLUÍDAS
+# ABA 2: HISTÓRICO DE OSs CONCLUÍDAS (FILTRADO POR SETOR + REABERTURA)
 # ------------------------------------------------------------------------------
 with tab_historico:
-    st.subheader("📜 Registro de Manutenções Concluídas no Turno")
+    st.subheader(f"📜 Registro de OSs Concluídas no Setor: {setor_selecionado}")
     
-    historico = st.session_state['historico_os']
+    # Filtragem do Histórico pelo Setor Selecionado
+    historico_setor = [os for os in st.session_state['historico_os'] if os['setor'] == setor_selecionado]
     
-    if historico:
-        # Métricas do Histórico
+    if historico_setor:
         col_h1, col_h2, col_h3 = st.columns(3)
-        col_h1.metric("Total de OSs Encerradas", len(historico))
-        col_h2.metric("Status PCM", "100% Auditado")
-        col_h3.metric("Última Resolução", historico[0]['hora_conclusao'])
+        col_h1.metric("OSs Encerradas (Este Setor)", len(historico_setor))
+        col_h2.metric("Status PCM", "Auditado")
+        col_h3.metric("Última Resolução", historico_setor[0]['hora_conclusao'])
         
         st.markdown("---")
         
-        # Converte para DataFrame para exibição limpa em Tabela
-        df_historico = pd.DataFrame(historico)
-        
-        # Reordena e renomeia colunas para visualização industrial
-        df_exibicao = df_historico[[
-            "id", "setor", "maquina", "prioridade", "defeito", "hora_abertura", "hora_conclusao", "status"
-        ]].copy()
-        
-        df_exibicao.columns = [
-            "Código OS", "Setor", "Máquina", "Prioridade", "Defeito / Chamado", "Abertura", "Conclusão", "Status"
-        ]
-        
-        # Exibe a tabela interativa
-        st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
-        
-        # Botão para Exportar o Histórico do Turno em CSV
-        csv_historico = df_exibicao.to_csv(index=False).encode('utf-8')
+        # Exibição individual das OSs com opção de Reabrir
+        for idx, item_hist in enumerate(historico_setor):
+            c_info, c_acao = st.columns([4, 1])
+            
+            with c_info:
+                st.write(f"✅ **{item_hist['id']}** | **Máquina:** {item_hist['maquina']} | **Abertura:** {item_hist.get('hora_abertura', item_hist.get('hora'))} | **Conclusão:** {item_hist['hora_conclusao']}")
+                st.caption(f"Defeito Resolvido: {item_hist['defeito']} (Prioridade: {item_hist['prioridade']})")
+            
+            with c_acao:
+                # Botão para REABRIR a OS e mover de volta para pendentes
+                if st.button(f"🔄 Reabrir {item_hist['id']}", key=f"btn_reabrir_{item_hist['id']}", use_container_width=True):
+                    os_reaberta = {
+                        "id": item_hist["id"],
+                        "setor": item_hist["setor"],
+                        "maquina": item_hist["maquina"],
+                        "defeito": item_hist["defeito"],
+                        "prioridade": item_hist["prioridade"],
+                        "hora": datetime.now().strftime('%H:%M:%S')
+                    }
+                    # Move de volta para a lista de abertas
+                    st.session_state['lista_os'].insert(0, os_reaberta)
+                    # Remove do histórico
+                    st.session_state['historico_os'] = [os for os in st.session_state['historico_os'] if os['id'] != item_hist['id']]
+                    st.toast(f"OS {item_hist['id']} reaberta com sucesso e enviada ao painel!", icon="🔄")
+                    st.rerun()
+            st.divider()
+            
+        # Exportação do Histórico em CSV
+        df_historico_setor = pd.DataFrame(historico_setor)
+        csv_historico = df_historico_setor.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="📥 Baixar Histórico do Turno em CSV (Auditoria PCM)",
+            label="📥 Baixar Histórico do Setor em CSV",
             data=csv_historico,
-            file_name=f"historico_os_injex_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+            file_name=f"historico_injex_{setor_selecionado.split('.')[1].strip()}_{datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv"
         )
     else:
-        st.info("Nenhuma Ordem de Serviço foi concluída até o momento neste turno.")
+        st.info(f"Nenhuma Ordem de Serviço foi concluída para o setor **{setor_selecionado}** neste turno.")
