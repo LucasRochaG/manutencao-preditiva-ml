@@ -12,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inicialização da Lista Global de Ordens de Serviço (Persistência em Sessão)
+# Inicialização da Lista de OSs Abertas
 if 'lista_os' not in st.session_state:
     st.session_state['lista_os'] = [
         {
@@ -35,9 +35,24 @@ if 'lista_os' not in st.session_state:
             "id": "OS-1003",
             "setor": "2. Montagem Automática",
             "maquina": "MONT-01",
-            "defeito": "Ajuste na garra pneumática do êMBolo",
+            "defeito": "Ajuste na garra pneumática do êmbolo",
             "prioridade": "Baixa",
             "hora": "10:05:44"
+        }
+    ]
+
+# Inicialização do Histórico de OSs Concluídas
+if 'historico_os' not in st.session_state:
+    st.session_state['historico_os'] = [
+        {
+            "id": "OS-0998",
+            "setor": "1. Injeção Plástica",
+            "maquina": "INJ-01",
+            "defeito": "Troca de resistência cerâmica Z2",
+            "prioridade": "Média",
+            "hora_abertura": "06:20:00",
+            "hora_conclusao": "07:10:15",
+            "status": "Concluída"
         }
     ]
 
@@ -46,7 +61,6 @@ st.markdown("""
 <style>
     .stMetric { background-color: #1f2937; padding: 10px; border-radius: 8px; }
     
-    /* Cards Compactos de OS */
     .os-card-alta {
         background-color: #450a0a;
         border-left: 6px solid #dc2626;
@@ -105,9 +119,7 @@ maquina_selecionada = st.sidebar.selectbox("⚙️ Selecione a Máquina:", maqui
 
 st.sidebar.markdown("---")
 
-# ==============================================================================
 # SEÇÃO PREVENTIVA (SIDEBAR)
-# ==============================================================================
 st.sidebar.subheader("🛠️ Plano de Preventiva")
 
 dados_preventiva = {
@@ -152,9 +164,7 @@ st.sidebar.markdown(f"""
 
 st.sidebar.markdown("---")
 
-# ==============================================================================
 # FORMULÁRIO DE ABERTURA RÁPIDA DE OS (SIDEBAR)
-# ==============================================================================
 st.sidebar.subheader("📝 Abertura Rápida de OS")
 
 with st.sidebar.form(key="form_os_simplificada"):
@@ -182,105 +192,155 @@ if submit_os:
         st.sidebar.error("Descreva o defeito antes de enviar.")
 
 # ==============================================================================
-# PAINEL PRINCIPAL
+# ESTRUTURA DE ABAS NA TELA PRINCIPAL
 # ==============================================================================
 st.title(f"🏭 Injex Cirúrgica | {maquina_selecionada}")
 
-# ------------------------------------------------------------------------------
-# QUADRO DE ORDENS DE SERVIÇO ABERTAS DO SETOR (COM BOTÃO DE BAIXA)
-# ------------------------------------------------------------------------------
-st.subheader(f"📋 Ordens de Serviço Abertas no Setor: {setor_selecionado}")
+tab_painel, tab_historico = st.tabs(["📌 Painel Operacional & Telemetria", "📜 Histórico de OSs Concluídas"])
 
-os_do_setor = [os for os in st.session_state['lista_os'] if os['setor'] == setor_selecionado]
+# ------------------------------------------------------------------------------
+# ABA 1: PAINEL OPERACIONAL (CARDS + TELEMETRIA)
+# ------------------------------------------------------------------------------
+with tab_painel:
+    st.subheader(f"📋 Ordens de Serviço Abertas no Setor: {setor_selecionado}")
 
-if os_do_setor:
-    cols_os = st.columns(min(len(os_do_setor), 4))
-    
-    for idx, item in enumerate(os_do_setor):
-        col_target = cols_os[idx % 4]
+    os_do_setor = [os for os in st.session_state['lista_os'] if os['setor'] == setor_selecionado]
+
+    if os_do_setor:
+        cols_os = st.columns(min(len(os_do_setor), 4))
         
-        if item['prioridade'] == "Alta":
-            css_class = "os-card-alta"
-            icone = "🔴 ALTA"
-        elif item['prioridade'] == "Média":
-            css_class = "os-card-media"
-            icone = "🟡 MÉDIA"
-        else:
-            css_class = "os-card-baixa"
-            icone = "🟢 BAIXA"
+        for idx, item in enumerate(os_do_setor):
+            col_target = cols_os[idx % 4]
             
-        with col_target:
-            st.markdown(f"""
-            <div class="{css_class}">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <b>{item['id']} | {item['maquina']}</b>
-                    <small style="float: right;">⏱️ {item['hora']}</small>
+            if item['prioridade'] == "Alta":
+                css_class = "os-card-alta"
+                icone = "🔴 ALTA"
+            elif item['prioridade'] == "Média":
+                css_class = "os-card-media"
+                icone = "🟡 MÉDIA"
+            else:
+                css_class = "os-card-baixa"
+                icone = "🟢 BAIXA"
+                
+            with col_target:
+                st.markdown(f"""
+                <div class="{css_class}">
+                    <div style="display:flex; justify-between; align-items:center;">
+                        <b>{item['id']} | {item['maquina']}</b>
+                        <small style="float: right;">⏱️ {item['hora']}</small>
+                    </div>
+                    <div style="margin-top: 4px; font-size: 0.9em;">
+                        <b>Prioridade:</b> {icone}<br>
+                        <b>Defeito:</b> {item['defeito']}
+                    </div>
                 </div>
-                <div style="margin-top: 4px; font-size: 0.9em;">
-                    <b>Prioridade:</b> {icone}<br>
-                    <b>Defeito:</b> {item['defeito']}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Botão para dar baixa na OS
-            if st.button(f"✅ Concluir {item['id']}", key=f"btn_baixa_{item['id']}", use_container_width=True):
-                st.session_state['lista_os'] = [os for os in st.session_state['lista_os'] if os['id'] != item['id']]
-                st.toast(f"OS {item['id']} concluída com sucesso!", icon="🎉")
-                st.rerun()
-else:
-    st.info("✨ Nenhuma Ordem de Serviço aberta para este setor no momento.")
-
-st.markdown("---")
-
-# ==============================================================================
-# TELEMETRIA E OEE
-# ==============================================================================
-st.subheader("🎛️ Painel de Telemetria CLP")
-if setor_selecionado == "1. Injeção Plástica":
-    col_c1, col_c2, col_c3 = st.columns(3)
-    temp_canhao = col_c1.slider("Temp. Canhão (°C)", 180.0, 260.0, 220.0)
-    temp_molde = col_c2.slider("Temp. Água Molde (°C)", 15.0, 70.0, 32.0)
-    pressao_recalque = col_c3.slider("Pressão Injeção (bar)", 50.0, 160.0, 95.0)
-    risco = min(100.0, (pressao_recalque * temp_molde) / 80)
-else:
-    col_c1, col_c2 = st.columns(2)
-    param1 = col_c1.slider("Pressão de Linha (bar)", 4.0, 10.0, 6.5)
-    param2 = col_c2.slider("Velocidade Ciclo (pçs/min)", 100, 300, 240)
-    risco = 15.0 if param1 >= 5.5 else 75.0
-
-st.markdown("---")
-st.subheader("📊 Indicadores Industriais (OEE)")
-disp = max(60, int(98 - (risco * 0.3)))
-perf = max(70, int(95 - (risco * 0.2)))
-qual = max(80, int(99 - (risco * 0.4)))
-oee = int((disp/100) * (perf/100) * (qual/100) * 100)
-
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Disponibilidade", f"{disp} %")
-m2.metric("Performance", f"{perf} %")
-m3.metric("Qualidade", f"{qual} %")
-m4.metric("OEE GLOBAL", f"{oee} %", delta=f"{oee - 85}% Meta")
-
-# ==============================================================================
-# DIAGNÓSTICO PREDITIVO
-# ==============================================================================
-st.markdown("---")
-col_p1, col_p2 = st.columns([1, 1])
-
-with col_p1:
-    st.subheader("🤖 Diagnóstico da IA")
-    st.progress(int(risco))
-    st.write(f"**Risco Calculado:** `{risco:.1f}%`")
-    if risco < 35:
-        st.success("🟢 **OPERAÇÃO NORMAL**")
-    elif 35 <= risco < 65:
-        st.warning("🟡 **MOMENTO DE ATENÇÃO**")
+                """, unsafe_allow_html=True)
+                
+                # Ação de Dar Baixa e Mover para o Histórico
+                if st.button(f"✅ Concluir {item['id']}", key=f"btn_baixa_{item['id']}", use_container_width=True):
+                    # Registra hora de conclusão e salva no histórico
+                    os_resolvida = item.copy()
+                    os_resolvida["hora_abertura"] = item["hora"]
+                    os_resolvida["hora_conclusao"] = datetime.now().strftime('%H:%M:%S')
+                    os_resolvida["status"] = "Concluída"
+                    
+                    st.session_state['historico_os'].insert(0, os_resolvida)
+                    
+                    # Remove das abertas
+                    st.session_state['lista_os'] = [os for os in st.session_state['lista_os'] if os['id'] != item['id']]
+                    st.toast(f"OS {item['id']} encerrada e movida para o histórico!", icon="🎉")
+                    st.rerun()
     else:
-        st.error("🔴 **RISCO DE PARADA DE LINHA**")
+        st.info("✨ Nenhuma Ordem de Serviço aberta para este setor no momento.")
 
-with col_p2:
-    st.subheader("🔧 Componentes para Preventiva")
-    st.write(f"**Tempo Necessário Parada:** `{info_prev['tempo']}`")
-    for p in info_prev['pecas']:
-        st.write(f"• {p}")
+    st.markdown("---")
+
+    # TELEMETRIA E OEE
+    st.subheader("🎛️ Painel de Telemetria CLP")
+    if setor_selecionado == "1. Injeção Plástica":
+        col_c1, col_c2, col_c3 = st.columns(3)
+        temp_canhao = col_c1.slider("Temp. Canhão (°C)", 180.0, 260.0, 220.0)
+        temp_molde = col_c2.slider("Temp. Água Molde (°C)", 15.0, 70.0, 32.0)
+        pressao_recalque = col_c3.slider("Pressão Injeção (bar)", 50.0, 160.0, 95.0)
+        risco = min(100.0, (pressao_recalque * temp_molde) / 80)
+    else:
+        col_c1, col_c2 = st.columns(2)
+        param1 = col_c1.slider("Pressão de Linha (bar)", 4.0, 10.0, 6.5)
+        param2 = col_c2.slider("Velocidade Ciclo (pçs/min)", 100, 300, 240)
+        risco = 15.0 if param1 >= 5.5 else 75.0
+
+    st.markdown("---")
+    st.subheader("📊 Indicadores Industriais (OEE)")
+    disp = max(60, int(98 - (risco * 0.3)))
+    perf = max(70, int(95 - (risco * 0.2)))
+    qual = max(80, int(99 - (risco * 0.4)))
+    oee = int((disp/100) * (perf/100) * (qual/100) * 100)
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Disponibilidade", f"{disp} %")
+    m2.metric("Performance", f"{perf} %")
+    m3.metric("Qualidade", f"{qual} %")
+    m4.metric("OEE GLOBAL", f"{oee} %", delta=f"{oee - 85}% Meta")
+
+    st.markdown("---")
+    col_p1, col_p2 = st.columns([1, 1])
+
+    with col_p1:
+        st.subheader("🤖 Diagnóstico da IA")
+        st.progress(int(risco))
+        st.write(f"**Risco Calculado:** `{risco:.1f}%`")
+        if risco < 35:
+            st.success("🟢 **OPERAÇÃO NORMAL**")
+        elif 35 <= risco < 65:
+            st.warning("🟡 **MOMENTO DE ATENÇÃO**")
+        else:
+            st.error("🔴 **RISCO DE PARADA DE LINHA**")
+
+    with col_p2:
+        st.subheader("🔧 Componentes para Preventiva")
+        st.write(f"**Tempo Necessário Parada:** `{info_prev['tempo']}`")
+        for p in info_prev['pecas']:
+            st.write(f"• {p}")
+
+# ------------------------------------------------------------------------------
+# ABA 2: HISTÓRICO DE OSs CONCLUÍDAS
+# ------------------------------------------------------------------------------
+with tab_historico:
+    st.subheader("📜 Registro de Manutenções Concluídas no Turno")
+    
+    historico = st.session_state['historico_os']
+    
+    if historico:
+        # Métricas do Histórico
+        col_h1, col_h2, col_h3 = st.columns(3)
+        col_h1.metric("Total de OSs Encerradas", len(historico))
+        col_h2.metric("Status PCM", "100% Auditado")
+        col_h3.metric("Última Resolução", historico[0]['hora_conclusao'])
+        
+        st.markdown("---")
+        
+        # Converte para DataFrame para exibição limpa em Tabela
+        df_historico = pd.DataFrame(historico)
+        
+        # Reordena e renomeia colunas para visualização industrial
+        df_exibicao = df_historico[[
+            "id", "setor", "maquina", "prioridade", "defeito", "hora_abertura", "hora_conclusao", "status"
+        ]].copy()
+        
+        df_exibicao.columns = [
+            "Código OS", "Setor", "Máquina", "Prioridade", "Defeito / Chamado", "Abertura", "Conclusão", "Status"
+        ]
+        
+        # Exibe a tabela interativa
+        st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
+        
+        # Botão para Exportar o Histórico do Turno em CSV
+        csv_historico = df_exibicao.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Baixar Histórico do Turno em CSV (Auditoria PCM)",
+            data=csv_historico,
+            file_name=f"historico_os_injex_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+            mime="text/csv"
+        )
+    else:
+        st.info("Nenhuma Ordem de Serviço foi concluída até o momento neste turno.")
