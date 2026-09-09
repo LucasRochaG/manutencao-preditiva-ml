@@ -78,16 +78,28 @@ st.markdown("""
     .badge-mec { background-color: #10b981; color: white; padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.5px; }
     .badge-op  { background-color: #3b82f6; color: white; padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.5px; }
 
-    /* Caixa IoT Telemetria */
-    .iot-banner {
-        background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
-        border: 1px solid #334155;
+    /* Caixa CLP Telemetria */
+    .iot-banner-waiting {
+        background: #1e293b;
+        border: 1px dashed #64748b;
         border-radius: 8px;
         padding: 12px 18px;
         margin-bottom: 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        color: #94a3b8;
+    }
+    .iot-banner-online {
+        background: linear-gradient(90deg, #0f172a 0%, #064e3b 100%);
+        border: 1px solid #059669;
+        border-radius: 8px;
+        padding: 12px 18px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #e2e8f0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -138,20 +150,29 @@ else:
         st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("##### 🧭 Navegação do Sistema")
 
-# Botões de Navegação Estilizados
-if st.sidebar.button("🖥️ Painel de Telemetria e Máquina", use_container_width=True):
-    st.session_state['aba_ativa'] = "🖥️ Painel"
-    st.rerun()
+# ------------------------------------------------------------------------------
+# BOTÕES DE NAVEGAÇÃO LADO A LADO COM DESTAQUE NO ATIVO
+# ------------------------------------------------------------------------------
+col_nav1, col_nav2 = st.sidebar.columns(2)
 
-if st.sidebar.button("🌐 Visão Geral da Fábrica (OEE & OS)", use_container_width=True):
-    st.session_state['aba_ativa'] = "🌐 Fábrica"
-    st.rerun()
+with col_nav1:
+    # Se ativo, usamos primary (cor destacada), senão secondary
+    tipo_btn_1 = "primary" if st.session_state['aba_ativa'] == "🖥️ Painel" else "secondary"
+    if st.button("🖥️ Painel", use_container_width=True, type=tipo_btn_1):
+        st.session_state['aba_ativa'] = "🖥️ Painel"
+        st.rerun()
+
+with col_nav2:
+    tipo_btn_2 = "primary" if st.session_state['aba_ativa'] == "🌐 Fábrica" else "secondary"
+    if st.button("🌐 Fábrica", use_container_width=True, type=tipo_btn_2):
+        st.session_state['aba_ativa'] = "🌐 Fábrica"
+        st.rerun()
 
 # Aba exclusiva para Administradores
 if st.session_state['autenticado'] and st.session_state['usuario_logado']['perfil'] == "Administrador":
-    if st.sidebar.button("👥 Gestão de Cadastros (ADM)", use_container_width=True):
+    tipo_btn_adm = "primary" if st.session_state['aba_ativa'] == "👥 Cadastros (ADM)" else "secondary"
+    if st.sidebar.button("👥 Gestão de Cadastros (ADM)", use_container_width=True, type=tipo_btn_adm):
         st.session_state['aba_ativa'] = "👥 Cadastros (ADM)"
         st.rerun()
 else:
@@ -272,7 +293,6 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
     st.markdown("Acompanhamento multi-setorial de Ordens de Serviço, filas de atendimento e relatórios técnicos.")
     st.markdown("---")
     
-    # Métricas globais da fábrica
     df_os_todas = pd.DataFrame(st.session_state['lista_os'] + st.session_state['em_andamento_os'] + st.session_state['historico_os'])
     if not df_os_todas.empty:
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
@@ -314,7 +334,7 @@ elif st.session_state['aba_ativa'] == "🌐 Fábrica":
             else:
                 st.info("Nenhuma ordem aberta neste setor.")
 
-        # 2. OS EM ANDAMENTO (RELATÓRIO TÉCNICO OBRIGATÓRIO)
+        # 2. OS EM ANDAMENTO
         with col_and:
             os_and = [o for o in st.session_state['em_andamento_os'] if o['setor'] == setor_nome]
             st.markdown(f"#### ⚙️ Em Atendimento ({len(os_and)})")
@@ -392,22 +412,45 @@ else:
     st.markdown(f"### 🖥️ Painel Operacional — Setor: **{setor_selecionado}** | Ativo: **{maquina_selecionada}**")
     
     tag_maquina_atual = maquina_selecionada.split(' ')[0]
-    st.markdown(f"""
-    <div class="iot-banner">
-        <div>
-            📡 <b>MANTIS IoT Engine:</b> Conexão estabelecida com o CLP do ativo <b>{tag_maquina_atual}</b>
-        </div>
-        <div style="background-color: #0284c7; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold;">
-            🟢 STATUS: ONLINE (AO VIVO)
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    
+    # Gerenciador interativo de conexão do CLP (Simulação de ligar/desligar conexão)
+    if 'clp_conectado' not in st.session_state:
+        st.session_state['clp_conectado'] = False
+
+    col_clp1, col_clp2 = st.columns([4, 1])
+    with col_clp2:
+        if st.button("🔌 Conectar CLP", use_container_width=True):
+            st.session_state['clp_conectado'] = not st.session_state['clp_conectado']
+            st.rerun()
+
+    with col_clp1:
+        if st.session_state['clp_conectado']:
+            st.markdown(f"""
+            <div class="iot-banner-online">
+                <div>
+                    📡 <b>MANTIS IoT Engine:</b> Conexão estabilizada com o CLP do ativo <b>{tag_maquina_atual}</b>
+                </div>
+                <div><b>🟢 CONECTADO (ONLINE)</b></div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="iot-banner-waiting">
+                <div>
+                    📡 <b>MANTIS IoT Engine:</b> Aguardando conexão com o CLP de <b>{tag_maquina_atual}</b>...
+                </div>
+                <div><b>⏳ AGUARDANDO CONEXÃO</b></div>
+            </div>
+            """, unsafe_allow_html=True)
 
     tab_principal, tab_preventiva, tab_abertas, tab_andamento, tab_historico = st.tabs([
         "📊 Telemetria & OEE", "🛠️ Plano Preventivo", "📌 OSs Abertas", "⚙️ Em Atendimento", "✅ Histórico de OS"
     ])
 
     with tab_principal:
+        if not st.session_state['clp_conectado']:
+            st.warning("⚠️ O CLP está desconectado. Clique no botão **'Conectar CLP'** acima para iniciar a leitura dos dados em tempo real.")
+        
         if setor_selecionado == "Injetora Plástica":
             col_c1, col_c2, col_c3 = st.columns(3)
             temp_canhao = col_c1.slider("Temperatura do Canhão (°C)", 180.0, 260.0, 220.0)
@@ -420,10 +463,10 @@ else:
             param2 = col_c2.slider("Velocidade de Operação (peças/min)", 100, 300, 240)
             risco = 15.0 if param1 >= 5.5 else 75.0
 
-        disp = max(60, int(98 - (risco * 0.3)))
-        perf = max(70, int(95 - (risco * 0.2)))
-        qual = max(80, int(99 - (risco * 0.4)))
-        oee = int((disp/100) * (perf/100) * (qual/100) * 100)
+        disp = max(60, int(98 - (risco * 0.3))) if st.session_state['clp_conectado'] else 0
+        perf = max(70, int(95 - (risco * 0.2))) if st.session_state['clp_conectado'] else 0
+        qual = max(80, int(99 - (risco * 0.4))) if st.session_state['clp_conectado'] else 0
+        oee = int((disp/100) * (perf/100) * (qual/100) * 100) if st.session_state['clp_conectado'] else 0
 
         st.markdown("##### 📈 Indicadores Chave de Desempenho (OEE Global)")
         m1, m2, m3, m4 = st.columns(4)
@@ -432,19 +475,23 @@ else:
         m3.metric("Qualidade", f"{qual}%")
         m4.metric("OEE Total", f"{oee}%")
 
-        st.progress(int(risco), text=f"Índice Preditivo de Risco / Carga Térmica: {int(risco)}%")
-        if risco < 35:
-            st.success("🟢 Condição Operacional Ideal — Parâmetros Estáveis")
-        elif 35 <= risco < 65:
-            st.warning("🟡 Atenção Operacional — Oscilações Detectadas no Sistema")
+        st.progress(int(risco) if st.session_state['clp_conectado'] else 0, text=f"Índice Preditivo de Risco / Carga Térmica: {int(risco) if st.session_state['clp_conectado'] else 0}%")
+        
+        if st.session_state['clp_conectado']:
+            if risco < 35:
+                st.success("🟢 Condição Operacional Ideal — Parâmetros Estáveis")
+            elif 35 <= risco < 65:
+                st.warning("🟡 Atenção Operacional — Oscilações Detectadas no Sistema")
+            else:
+                st.error("🔴 Alerta Crítico — Risco Imediato de Parada por Falha Mecânica")
         else:
-            st.error("🔴 Alerta Crítico — Risco Imediato de Parada por Falha Mecânica")
+            st.info("ℹ️ Dados em modo offline aguardando conexão com a máquina.")
 
         st.markdown("---")
         st.markdown("##### 📉 Histograma de Telemetria (Tempo Real)")
         df_chart = pd.DataFrame({
-            "Pressão do Sistema (bar)": np.random.normal(loc=100, scale=2, size=20),
-            "Temperatura Interna (°C)": np.random.normal(loc=220, scale=5, size=20)
+            "Pressão do Sistema (bar)": np.random.normal(loc=100, scale=2, size=20) if st.session_state['clp_conectado'] else np.zeros(20),
+            "Temperatura Interna (°C)": np.random.normal(loc=220, scale=5, size=20) if st.session_state['clp_conectado'] else np.zeros(20)
         })
         st.line_chart(df_chart)
 
