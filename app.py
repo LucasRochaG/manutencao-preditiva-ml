@@ -19,22 +19,29 @@ MAQUINAS_POR_SETOR = {
     "Embalagem & Selagem": [f"EMB-{i:02d} (Embalagem {i})" for i in range(1, 11)]
 }
 
-# Inicialização do session_state
+# Inicialização do session_state (incluindo controle de autenticação)
+if 'autenticado' not in st.session_state:
+    st.session_state['autenticado'] = False
+if 'usuario_nome' not in st.session_state:
+    st.session_state['usuario_nome'] = ""
+if 'perfil_usuario' not in st.session_state:
+    st.session_state['perfil_usuario'] = "" # "Operador" ou "Mecânico"
+
 if 'lista_os' not in st.session_state:
     st.session_state['lista_os'] = [
-        {"id": "OS-1001", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Vazamento de óleo no cilindro", "prioridade": "Alta", "hora_abertura": "08:15"},
-        {"id": "OS-1002", "setor": "Injetora Plástica", "maquina": "INJ-05 (Injetora 5)", "defeito": "Ruído no exaustor", "prioridade": "Média", "hora_abertura": "09:30"},
-        {"id": "OS-1004", "setor": "Embalagem & Selagem", "maquina": "EMB-04 (Embalagem 4)", "defeito": "Falha na resistência de selagem", "prioridade": "Alta", "hora_abertura": "10:11"}
+        {"id": "OS-1001", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Vazamento de óleo no cilindro", "prioridade": "Alta", "hora_abertura": "08:15", "autor_abertura": "Operador João"},
+        {"id": "OS-1002", "setor": "Injetora Plástica", "maquina": "INJ-05 (Injetora 5)", "defeito": "Ruído no exaustor", "prioridade": "Média", "hora_abertura": "09:30", "autor_abertura": "Operador Maria"},
+        {"id": "OS-1004", "setor": "Embalagem & Selagem", "maquina": "EMB-04 (Embalagem 4)", "defeito": "Falha na resistência de selagem", "prioridade": "Alta", "hora_abertura": "10:11", "autor_abertura": "Operador Pedro"}
     ]
 
 if 'em_andamento_os' not in st.session_state:
     st.session_state['em_andamento_os'] = [
-        {"id": "OS-1003", "setor": "Linha de Montagem", "maquina": "MONT-02 (Montagem 2)", "defeito": "Ajuste na garra pneumática", "prioridade": "Baixa", "hora_abertura": "10:05", "hora_inicio": "10:20"}
+        {"id": "OS-1003", "setor": "Linha de Montagem", "maquina": "MONT-02 (Montagem 2)", "defeito": "Ajuste na garra pneumática", "prioridade": "Baixa", "hora_abertura": "10:05", "hora_inicio": "10:20", "mecanico_responsavel": "Carlos (Mecânico)"}
     ]
 
 if 'historico_os' not in st.session_state:
     st.session_state['historico_os'] = [
-        {"id": "OS-0998", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Troca de resistência Z2", "prioridade": "Média", "hora_abertura": "06:20", "hora_inicio": "06:25", "hora_conclusao": "07:10", "status": "Concluída"}
+        {"id": "OS-0998", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Troca de resistência Z2", "prioridade": "Média", "hora_abertura": "06:20", "hora_inicio": "06:25", "hora_conclusao": "07:10", "status": "Concluída", "mecanico_responsavel": "Carlos (Mecânico)"}
     ]
 
 # Estilo CSS Personalizado
@@ -52,15 +59,52 @@ st.markdown("""
         align-items: center;
         font-size: 0.75rem;
     }
+    .badge-op { background-color: #3b82f6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+    .badge-mec { background-color: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# BARRA LATERAL: NOME DO PROJETO & NAVEGAÇÃO
+# BARRA LATERAL: NOME DO PROJETO, LOGIN & NAVEGAÇÃO
 # ==============================================================================
-st.sidebar.caption("🤖 PROJETO INDUSTRIAL")
+st.sidebar.caption("🤖 PROJETO INDUSTRIAL (MOBILE PWA READY)")
 st.sidebar.markdown("### 🦾 MANTIS 4.0")
 st.sidebar.caption("Maintenance & Machine Intelligence System")
+st.sidebar.markdown("---")
+
+# MÓDULO DE AUTENTICAÇÃO NA BARRA LATERAL
+st.sidebar.markdown("##### 🔐 Credenciais de Acesso")
+if not st.session_state['autenticado']:
+    with st.sidebar.form("form_login"):
+        tipo_login = st.selectbox("Perfil de Acesso:", ["Operador de Fábrica", "Mecânico de Manutenção"])
+        nome_input = st.text_input("Seu Nome / Matrícula:")
+        senha_input = ""
+        if tipo_login == "Mecânico de Manutenção":
+            senha_input = st.text_input("Senha Técnica:", type="password")
+        
+        btn_login = st.form_submit_button("Entrar no Sistema", use_container_width=True)
+        
+        if btn_login:
+            if nome_input.strip() == "":
+                st.sidebar.error("Informe seu nome ou matrícula.")
+            else:
+                if tipo_login == "Mecânico de Manutenção" and senha_input != "1234":
+                    st.sidebar.error("Senha de mecânico incorreta! (Use: 1234)")
+                else:
+                    st.session_state['autenticado'] = True
+                    st.session_state['usuario_nome'] = nome_input
+                    st.session_state['perfil_usuario'] = "Mecânico" if tipo_login == "Mecânico de Manutenção" else "Operador"
+                    st.rerun()
+else:
+    badge_classe = "badge-mec" if st.session_state['perfil_usuario'] == "Mecânico" else "badge-op"
+    st.sidebar.markdown(f"👤 **{st.session_state['usuario_nome']}**")
+    st.sidebar.markdown(f"Perfil: <span class='{badge_classe}'>{st.session_state['perfil_usuario']}</span>", unsafe_allow_html=True)
+    if st.sidebar.button("🚪 Sair / Trocar Usuário", use_container_width=True):
+        st.session_state['autenticado'] = False
+        st.session_state['usuario_nome'] = ""
+        st.session_state['perfil_usuario'] = ""
+        st.rerun()
+
 st.sidebar.markdown("---")
 
 # NAVEGAÇÃO EM FORMA DE BOTÃO (PAINEL / FÁBRICA)
@@ -88,8 +132,8 @@ else:
     setor_selecionado = "Injetora Plástica"
     maquina_selecionada = MAQUINAS_POR_SETOR["Injetora Plástica"][0]
 
-# ABERTURA RÁPIDA DE OS
-st.sidebar.markdown("##### 📝 Nova OS")
+# ABERTURA RÁPIDA DE OS (QUALQUER UM PODE ABRIR)
+st.sidebar.markdown("##### 📝 Nova OS (Livre p/ Operadores)")
 os_setor = st.sidebar.selectbox("Setor Destino:", ["Injetora Plástica", "Linha de Montagem", "Embalagem & Selagem"], key="os_setor_select")
 maquinas_form_dinamicas = MAQUINAS_POR_SETOR[os_setor]
 
@@ -101,13 +145,15 @@ with st.sidebar.form(key="form_os_simplificada", clear_on_submit=True):
 
 if submit_os:
     if os_defeito.strip() != "":
+        autor = st.session_state['usuario_nome'] if st.session_state['autenticado'] else "Usuário Anônimo"
         nova_os = {
             "id": f"OS-{datetime.now().strftime('%M%S')}",
             "setor": os_setor,
             "maquina": os_maquina,
             "defeito": os_defeito,
             "prioridade": os_prioridade,
-            "hora_abertura": datetime.now().strftime('%H:%M')
+            "hora_abertura": datetime.now().strftime('%H:%M'),
+            "autor_abertura": autor
         }
         st.session_state['lista_os'].insert(0, nova_os)
         st.sidebar.success(f"OS Criada: {nova_os['id']}")
@@ -163,13 +209,19 @@ if st.session_state['pagina_ativa'] == "Fábrica":
             if os_ab:
                 for item in os_ab:
                     st.markdown(f"**{item['id']}** | {item['maquina']}")
-                    st.caption(f"⚠️ {item['defeito']} | Prioridade: {item['prioridade']} | Abertura: {item.get('hora_abertura','')}")
+                    st.caption(f"⚠️ {item['defeito']} | Prioridade: {item['prioridade']} | Por: {item.get('autor_abertura','N/D')}")
+                    
+                    # Regra de permissão: Apenas mecânico logado pode iniciar
                     if st.button(f"▶️ Iniciar {item['id']}", key=f"f_in_{setor_nome}_{item['id']}", use_container_width=True):
-                        os_and = item.copy()
-                        os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
-                        st.session_state['em_andamento_os'].insert(0, os_and)
-                        st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
-                        st.rerun()
+                        if st.session_state['autenticado'] and st.session_state['perfil_usuario'] == "Mecânico":
+                            os_and = item.copy()
+                            os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
+                            os_and["mecanico_responsavel"] = st.session_state['usuario_nome']
+                            st.session_state['em_andamento_os'].insert(0, os_and)
+                            st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ Apenas **Mecânicos autenticados** podem assumir e iniciar OSs!")
                     st.divider()
             else:
                 st.caption("Nenhuma ordem aberta neste setor.")
@@ -181,14 +233,18 @@ if st.session_state['pagina_ativa'] == "Fábrica":
             if os_and:
                 for item in os_and:
                     st.markdown(f"**{item['id']}** | {item['maquina']}")
-                    st.caption(f"🛠️ {item['defeito']} | Início do serviço: {item.get('hora_inicio','')}")
+                    st.caption(f"🛠️ {item['defeito']} | Resp: {item.get('mecanico_responsavel','Técnico')}")
+                    
                     if st.button(f"✅ Finalizar {item['id']}", key=f"f_fin_{setor_nome}_{item['id']}", use_container_width=True):
-                        os_conc = item.copy()
-                        os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
-                        os_conc["status"] = "Concluída"
-                        st.session_state['historico_os'].insert(0, os_conc)
-                        st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
-                        st.rerun()
+                        if st.session_state['autenticado'] and st.session_state['perfil_usuario'] == "Mecânico":
+                            os_conc = item.copy()
+                            os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
+                            os_conc["status"] = "Concluída"
+                            st.session_state['historico_os'].insert(0, os_conc)
+                            st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ Apenas **Mecânicos autenticados** podem fechar OSs!")
                     st.divider()
             else:
                 st.caption("Nenhum atendimento em execução.")
@@ -200,16 +256,21 @@ if st.session_state['pagina_ativa'] == "Fábrica":
             if os_res:
                 for item in os_res:
                     st.markdown(f"**{item['id']}** | {item['maquina']}")
-                    st.caption(f"✔️ {item['defeito']} | Conclusão: {item.get('hora_conclusao','')}")
+                    st.caption(f"✔️ {item['defeito']} | Mecânico: {item.get('mecanico_responsavel','')}")
+                    
                     if st.button(f"🔄 Reabrir {item['id']}", key=f"f_re_{setor_nome}_{item['id']}", use_container_width=True):
-                        os_reab = {
-                            "id": item["id"], "setor": item["setor"], "maquina": item["maquina"],
-                            "defeito": item["defeito"], "prioridade": item["prioridade"],
-                            "hora_abertura": datetime.now().strftime('%H:%M')
-                        }
-                        st.session_state['lista_os'].insert(0, os_reab)
-                        st.session_state['historico_os'] = [o for o in st.session_state['historico_os'] if o['id'] != item['id']]
-                        st.rerun()
+                        if st.session_state['autenticado'] and st.session_state['perfil_usuario'] == "Mecânico":
+                            os_reab = {
+                                "id": item["id"], "setor": item["setor"], "maquina": item["maquina"],
+                                "defeito": item["defeito"], "prioridade": item["prioridade"],
+                                "hora_abertura": datetime.now().strftime('%H:%M'),
+                                "autor_abertura": f"Reaberto por {st.session_state['usuario_nome']}"
+                            }
+                            st.session_state['lista_os'].insert(0, os_reab)
+                            st.session_state['historico_os'] = [o for o in st.session_state['historico_os'] if o['id'] != item['id']]
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ Apenas **Mecânicos** podem reabrir OSs.")
                     st.divider()
             else:
                 st.caption("Sem histórico recente neste setor.")
@@ -305,13 +366,18 @@ else:
         os_ab_maquina = [o for o in st.session_state['lista_os'] if o['maquina'] == maquina_selecionada]
         if os_ab_maquina:
             for item in os_ab_maquina:
-                st.write(f"📌 **{item['id']}** - **Problema:** {item['defeito']} | **Prioridade:** {item['prioridade']} | **Abertura:** {item.get('hora_abertura','')}")
+                st.write(f"📌 **{item['id']}** - **Problema:** {item['defeito']} | **Prioridade:** {item['prioridade']} | **Por:** {item.get('autor_abertura','N/D')}")
+                
                 if st.button(f"▶️ Iniciar Atendimento {item['id']}", key=f"p_in_{item['id']}"):
-                    os_and = item.copy()
-                    os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
-                    st.session_state['em_andamento_os'].insert(0, os_and)
-                    st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
-                    st.rerun()
+                    if st.session_state['autenticado'] and st.session_state['perfil_usuario'] == "Mecânico":
+                        os_and = item.copy()
+                        os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
+                        os_and["mecanico_responsavel"] = st.session_state['usuario_nome']
+                        st.session_state['em_andamento_os'].insert(0, os_and)
+                        st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ Restrito: Apenas **Mecânicos autenticados** podem iniciar atendimentos.")
                 st.divider()
         else:
             st.success(f"Nenhuma ordem de serviço aberta para a **{maquina_selecionada}**.")
@@ -320,14 +386,18 @@ else:
         os_and_maquina = [o for o in st.session_state['em_andamento_os'] if o['maquina'] == maquina_selecionada]
         if os_and_maquina:
             for item in os_and_maquina:
-                st.write(f"🛠️ **{item['id']}** - **Problema:** {item['defeito']} | **Início:** {item.get('hora_inicio','')}")
+                st.write(f"🛠️ **{item['id']}** - **Problema:** {item['defeito']} | **Técnico:** {item.get('mecanico_responsavel','')}")
+                
                 if st.button(f"✅ Finalizar OS {item['id']}", key=f"p_fin_{item['id']}"):
-                    os_conc = item.copy()
-                    os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
-                    os_conc["status"] = "Concluída"
-                    st.session_state['historico_os'].insert(0, os_conc)
-                    st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
-                    st.rerun()
+                    if st.session_state['autenticado'] and st.session_state['perfil_usuario'] == "Mecânico":
+                        os_conc = item.copy()
+                        os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
+                        os_conc["status"] = "Concluída"
+                        st.session_state['historico_os'].insert(0, os_conc)
+                        st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ Restrito: Apenas **Mecânicos autenticados** podem concluir OSs.")
                 st.divider()
         else:
             st.info(f"Nenhuma manutenção em andamento no momento para a **{maquina_selecionada}**.")
@@ -336,7 +406,7 @@ else:
         os_res_maquina = [o for o in st.session_state['historico_os'] if o['maquina'] == maquina_selecionada]
         if os_res_maquina:
             for item in os_res_maquina:
-                st.write(f"✅ **{item['id']}** - **Solucionado:** {item['defeito']} | **Conclusão:** {item.get('hora_conclusao','')}")
+                st.write(f"✅ **{item['id']}** - **Solucionado:** {item['defeito']} | **Técnico:** {item.get('mecanico_responsavel','')} | **Conclusão:** {item.get('hora_conclusao','')}")
                 st.divider()
         else:
             st.caption(f"Nenhum histórico de manutenção recente para a **{maquina_selecionada}**.")
