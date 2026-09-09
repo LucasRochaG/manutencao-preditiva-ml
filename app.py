@@ -24,7 +24,7 @@ if 'lista_os' not in st.session_state:
     st.session_state['lista_os'] = [
         {"id": "OS-1001", "setor": "Injetora Plástica", "maquina": "INJ-01 (Injetora 1)", "defeito": "Vazamento de óleo no cilindro", "prioridade": "Alta", "hora_abertura": "08:15"},
         {"id": "OS-1002", "setor": "Injetora Plástica", "maquina": "INJ-05 (Injetora 5)", "defeito": "Ruído no exaustor", "prioridade": "Média", "hora_abertura": "09:30"},
-        {"id": "OS-1004", "setor": "Embalagem & Selagem", "maquina": "EMB-03 (Embalagem 3)", "defeito": "Falha na resistência", "prioridade": "Alta", "hora_abertura": "10:11"}
+        {"id": "OS-1004", "setor": "Embalagem & Selagem", "maquina": "EMB-04 (Embalagem 4)", "defeito": "Falha na resistência de selagem", "prioridade": "Alta", "hora_abertura": "10:11"}
     ]
 
 if 'em_andamento_os' not in st.session_state:
@@ -281,45 +281,51 @@ else:
                 for p in pecas:
                     st.write(f"• {p}")
 
+    # ==========================================================================
+    # ABAS DE OS DO PAINEL: FILTRADAS EXCLUSIVAMENTE PELA MÁQUINA SELECIONADA
+    # ==========================================================================
     with tab_abertas:
-        os_ab = [o for o in st.session_state['lista_os'] if o['setor'] == setor_selecionado]
-        if os_ab:
-            for item in os_ab:
-                st.write(f"**{item['id']}** ({item['maquina']}) - Defeito: {item['defeito']}")
-                if st.button(f"▶️ Atender {item['id']}", key=f"p_in_{item['id']}"):
+        os_ab_maquina = [o for o in st.session_state['lista_os'] if o['maquina'] == maquina_selecionada]
+        if os_ab_maquina:
+            for item in os_ab_maquina:
+                st.write(f"📌 **{item['id']}** - **Problema:** {item['defeito']} | **Prioridade:** {item['prioridade']} | **Abertura:** {item.get('hora_abertura','')}")
+                if st.button(f"▶️ Iniciar Atendimento {item['id']}", key=f"p_in_{item['id']}"):
                     os_and = item.copy()
                     os_and["hora_inicio"] = datetime.now().strftime('%H:%M')
                     st.session_state['em_andamento_os'].insert(0, os_and)
                     st.session_state['lista_os'] = [o for o in st.session_state['lista_os'] if o['id'] != item['id']]
                     st.rerun()
+                st.divider()
         else:
-            st.caption("Nenhuma ordem de serviço aberta para este setor.")
+            st.success(f"Nenhuma ordem de serviço aberta para a **{maquina_selecionada}**.")
 
     with tab_andamento:
-        os_and = [o for o in st.session_state['em_andamento_os'] if o['setor'] == setor_selecionado]
-        if os_and:
-            for item in os_and:
-                st.write(f"🛠️ **{item['id']}** ({item['maquina']}) - Defeito: {item['defeito']}")
-                if st.button(f"✅ Finalizar {item['id']}", key=f"p_fin_{item['id']}"):
+        os_and_maquina = [o for o in st.session_state['em_andamento_os'] if o['maquina'] == maquina_selecionada]
+        if os_and_maquina:
+            for item in os_and_maquina:
+                st.write(f"🛠️ **{item['id']}** - **Problema:** {item['defeito']} | **Início:** {item.get('hora_inicio','')}")
+                if st.button(f"✅ Finalizar OS {item['id']}", key=f"p_fin_{item['id']}"):
                     os_conc = item.copy()
                     os_conc["hora_conclusao"] = datetime.now().strftime('%H:%M')
                     os_conc["status"] = "Concluída"
                     st.session_state['historico_os'].insert(0, os_conc)
                     st.session_state['em_andamento_os'] = [o for o in st.session_state['em_andamento_os'] if o['id'] != item['id']]
                     st.rerun()
+                st.divider()
         else:
-            st.caption("Nenhuma manutenção em andamento para este setor.")
+            st.info(f"Nenhuma manutenção em andamento no momento para a **{maquina_selecionada}**.")
 
     with tab_historico:
-        os_res = [o for o in st.session_state['historico_os'] if o['setor'] == setor_selecionado]
-        if os_res:
-            for item in os_res:
-                st.write(f"✅ **{item['id']}** ({item['maquina']}) - Solucionado: {item['defeito']}")
+        os_res_maquina = [o for o in st.session_state['historico_os'] if o['maquina'] == maquina_selecionada]
+        if os_res_maquina:
+            for item in os_res_maquina:
+                st.write(f"✅ **{item['id']}** - **Solucionado:** {item['defeito']} | **Conclusão:** {item.get('hora_conclusao','')}")
+                st.divider()
         else:
-            st.caption("Nenhum histórico registrado para este setor.")
+            st.caption(f"Nenhum histórico de manutenção recente para a **{maquina_selecionada}**.")
 
 # ==============================================================================
-# RODAPÉ: MÓDULO DE CONEXÃO IOT / CLP (AGUARDANDO DADOS DA MÁQUINA)
+# RODAPÉ: MÓDULO DE CONEXÃO IOT / CLP
 # ==============================================================================
 st.markdown("---")
 tag_maquina_atual = maquina_selecionada if st.session_state['pagina_ativa'] == "Painel" else "PLANT-GLOBAL"
@@ -336,7 +342,7 @@ st.markdown(f"""
         </div>
     </div>
     <div style="margin-top: 8px; font-family: monospace; font-size: 0.8rem; color: #64748b;">
-        [MANTIS SYSTEM LOG]: Solicitando fluxo continuo de pacotes do controlador do setor ({setor_selecionado}). Sinal aguardando sincronização... (0 kb/s)
+        [MANTIS SYSTEM LOG]: Solicitando fluxo contínuo de pacotes da máquina ({tag_maquina_atual}). Sinal aguardando sincronização... (0 kb/s)
     </div>
 </div>
 """, unsafe_allow_html=True)
