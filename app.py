@@ -45,8 +45,8 @@ st.markdown("""
         background-color: #0f172a;
         border: 1px solid #1e293b;
         border-radius: 6px;
-        padding: 4px 10px;
-        margin-top: 15px;
+        padding: 6px 12px;
+        margin-bottom: 15px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -228,6 +228,21 @@ else:
     # TÍTULO EXIBINDO O SETOR COMPLETO JUNTO DA MÁQUINA SELECIONADA
     st.markdown(f"### 🏢 Setor: **{setor_selecionado}** | ⚙️ **{maquina_selecionada}**")
 
+    # ==========================================================================
+    # AVISO DE CONEXÃO DO CLP NO TOPO (EXCLUSIVO DO PAINEL)
+    # ==========================================================================
+    tag_maquina_atual = maquina_selecionada.split(' ')[0]
+    st.markdown(f"""
+    <div class="iot-card-mini">
+        <div style="color: #64748b; font-family: monospace;">
+            📡 <b>MANTIS IoT:</b> Conexão com o <b>CLP</b> pendente (Alvo: <b>{tag_maquina_atual}</b>)
+        </div>
+        <div style="background-color: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">
+            ⏳ Sem Sincronização <b>CLP</b> (Modo Simulação)
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     tab_principal, tab_preventiva, tab_abertas, tab_andamento, tab_historico = st.tabs([
         "📊 Telemetria", "🛠️ Plano Preventivo", "📌 OSs Abertas", "⚙️ Em Atendimento", "✅ Histórico"
     ])
@@ -325,18 +340,3 @@ else:
                 st.divider()
         else:
             st.caption(f"Nenhum histórico de manutenção recente para a **{maquina_selecionada}**.")
-
-    # ==========================================================================
-    # RODAPÉ COMPACTO: APARECE APENAS NO PAINEL DA MÁQUINA SELECIONADA
-    # ==========================================================================
-    tag_maquina_atual = maquina_selecionada.split(' ')[0]
-    st.markdown(f"""
-    <div class="iot-card-mini">
-        <div style="color: #64748b; font-family: monospace;">
-            📡 <b>MANTIS IoT:</b> Conexão Modbus TCP pendente (Alvo: <b>{tag_maquina_atual}</b>)
-        </div>
-        <div style="background-color: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">
-            ⏳ Sem Conexão Direta (Modo Simulação)
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
