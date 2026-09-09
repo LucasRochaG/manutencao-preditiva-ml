@@ -15,7 +15,7 @@ st.set_page_config(
 # BARRA LATERAL: SELEÇÃO DE SETOR E MÁQUINA
 # ==============================================================================
 st.sidebar.image("https://img.icons8.com/color/96/syringe.png", width=70)
-st.sidebar.title("Injeção Cirúrgica LTDA")
+st.sidebar.title("Injex Cirúrgica LTDA")
 st.sidebar.subheader("Nível Fabril - Indústria 4.0")
 
 # 1. Seleção do Setor
