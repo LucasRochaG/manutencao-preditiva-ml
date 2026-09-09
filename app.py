@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
 from datetime import datetime
 
 # ==============================================================================
@@ -131,20 +130,17 @@ info_prev = get_preventiva_dados(maquina_selecionada)
 if st.session_state['pagina_ativa'] == "Fábrica":
     st.markdown("### 🌐 Visão Geral Fábrica — INJEX PREDITIX 4.0")
     
-    # GRAFICO RESUMO DA FÁBRICA
+    # GRÁFICO RESUMO DE DEMANDAS
     df_os_todas = pd.DataFrame(st.session_state['lista_os'] + st.session_state['em_andamento_os'] + st.session_state['historico_os'])
     if not df_os_todas.empty:
         col_g1, col_g2 = st.columns([2, 1])
         with col_g1:
-            fig_bar = px.histogram(df_os_todas, x="setor", color="prioridade", barmode="group",
-                                  title="Volume de Demandas por Setor Fabril",
-                                  color_discrete_map={"Alta": "#ef4444", "Média": "#f59e0b", "Baixa": "#10b981"},
-                                  height=230)
-            fig_bar.update_layout(margin=dict(l=20, r=20, t=35, b=20), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig_bar, use_container_width=True)
+            df_counts = df_os_todas.groupby("setor").size().reset_index(name="Total de OSs")
+            st.markdown("##### 📊 Volume de Demandas por Setor Fabril")
+            st.bar_chart(df_counts.set_index("setor"))
         with col_g2:
             st.metric("Total de OSs Registradas", len(df_os_todas))
-            st.metric("Em Atendimento Agordo", len(st.session_state['em_andamento_os']))
+            st.metric("Em Atendimento Agora", len(st.session_state['em_andamento_os']))
             st.metric("Taxa de Resolução", f"{int((len(st.session_state['historico_os'])/len(df_os_todas))*100)}%")
 
     st.markdown("---")
@@ -265,32 +261,13 @@ else:
 
         st.markdown("---")
 
-        # GRÁFICOS DINÂMICOS DA MÁQUINA
-        col_g_left, col_g_right = st.columns([2, 1])
-
-        with col_g_left:
-            # Gráfico de Linhas / Área (Telemetria temporal)
-            df_chart = pd.DataFrame({
-                "Tempo (min)": list(range(1, 21)),
-                "Pressão": np.random.normal(loc=100, scale=2, size=20),
-                "Temperatura": np.random.normal(loc=220, scale=5, size=20)
-            })
-            fig_telemetry = px.line(df_chart, x="Tempo (min)", y=["Pressão", "Temperatura"],
-                                    title="📈 Telemetria Contínua de Processo (Últimos 20 min)",
-                                    height=250)
-            fig_telemetry.update_layout(margin=dict(l=10, r=10, t=30, b=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig_telemetry, use_container_width=True)
-
-        with col_g_right:
-            # Gráfico Donut OEE
-            df_oee = pd.DataFrame({
-                "Categoria": ["Eficiência Operacional", "Perdas de Processo"],
-                "Valor": [oee, 100 - oee]
-            })
-            fig_donut = px.pie(df_oee, values="Valor", names="Categoria", hole=0.6,
-                               title="🍩 OEE Balance", color_discrete_sequence=["#10b981", "#ef4444"], height=250)
-            fig_donut.update_layout(margin=dict(l=10, r=10, t=30, b=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", showlegend=False)
-            st.plotly_chart(fig_donut, use_container_width=True)
+        # GRÁFICO DE TELEMETRIA NATIVO
+        st.markdown("##### 📈 Telemetria Contínua de Processo (Últimos minutos)")
+        df_chart = pd.DataFrame({
+            "Pressão (bar)": np.random.normal(loc=100, scale=2, size=20),
+            "Temperatura (°C)": np.random.normal(loc=220, scale=5, size=20)
+        })
+        st.line_chart(df_chart)
 
     with tab_preventiva:
         st.caption(f"Tempo estimado de intervenção: {info_prev['tempo']}")
